@@ -570,8 +570,10 @@ function scheduling_save(): void
 function scheduler_run_manual(): void
 {
     $pdo = Db::pdo();
+    $d = input_json();
+    $triggeredBy = (($d['triggered_by'] ?? 'manual') === 'cron') ? 'cron' : 'manual';
     $machines = $pdo->query("SELECT * FROM machines WHERE active=1 AND kind='maestro_rest' ORDER BY id")->fetchAll();
-    $pdo->prepare("INSERT INTO scheduler_runs (started_at,success,triggered_by) VALUES (NOW(),0,'manual')")->execute();
+    $pdo->prepare('INSERT INTO scheduler_runs (started_at,success,triggered_by) VALUES (NOW(),0,?)')->execute([$triggeredBy]);
     $runId = (int)$pdo->lastInsertId();
     $sync = new MachineSyncService();
     $details = [];
