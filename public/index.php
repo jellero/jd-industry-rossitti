@@ -11,7 +11,7 @@ $assetVersion = static function (string $relative): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="app-build" content="20260928-1225">
+  <meta name="app-build" content="20260928-1305">
   <title>Produzione - Commesse e Bordatrice</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
@@ -214,6 +214,6 @@ $assetVersion = static function (string $relative): string {
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app-20260928-1250.js"></script>
+<script src="assets/app-20260928-1305.js"></script>
 </body>
 </html>
