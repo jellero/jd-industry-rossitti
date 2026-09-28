@@ -6,6 +6,9 @@
 
 $baseUrl = rtrim(getenv('COMMESSE_SCHEDULER_URL') ?: 'https://gestionalerossitti.jdev.bid/test/public', '/');
 $heartbeatFile = __DIR__ . '/scheduler-heartbeat.json';
+$args = isset($argv) && is_array($argv) ? $argv : [];
+$checkOnly = in_array('--check', $args, true);
+$forceRun = in_array('--force', $args, true);
 
 function scheduler_http($method, $url, $body = null)
 {
@@ -88,6 +91,20 @@ $interval = max(1, (int)(isset($settings['interval_minutes']) ? $settings['inter
 $heartbeat['enabled'] = $enabled;
 $heartbeat['interval_minutes'] = $interval;
 
+if ($checkOnly) {
+    $transport = function_exists('curl_init') ? 'php-curl' : (ini_get('allow_url_fopen') ? 'php-stream' : 'nessuno');
+    $heartbeatWritable = (is_file($heartbeatFile) && is_writable($heartbeatFile)) || (!is_file($heartbeatFile) && is_writable(__DIR__));
+    fwrite(STDOUT, "Synology scheduler check\n");
+    fwrite(STDOUT, "PHP CLI: " . PHP_VERSION . "\n");
+    fwrite(STDOUT, "Trasporto HTTP: " . $transport . "\n");
+    fwrite(STDOUT, "URL gestionale: " . $baseUrl . "\n");
+    fwrite(STDOUT, "API Scheduling: OK (HTTP " . $settingsStatus . ")\n");
+    fwrite(STDOUT, "Scheduler configurato: " . ($enabled ? 'attivo' : 'disabilitato') . "\n");
+    fwrite(STDOUT, "Intervallo: " . $interval . " minuti\n");
+    fwrite(STDOUT, "Heartbeat scrivibile: " . ($heartbeatWritable ? 'SI' : 'NO') . "\n");
+    exit(($transport !== 'nessuno' && $heartbeatWritable) ? 0 : 3);
+}
+
 if (!$enabled) {
     $heartbeat['state'] = 'disabled';
     $heartbeat['message'] = 'Scheduler disabilitato nelle impostazioni';
@@ -97,7 +114,7 @@ if (!$enabled) {
 }
 
 $lastSyncAt = isset($previous['last_sync_at']) ? strtotime($previous['last_sync_at']) : false;
-if ($lastSyncAt && (time() - $lastSyncAt) < ($interval * 60)) {
+if (!$forceRun && $lastSyncAt && (time() - $lastSyncAt) < ($interval * 60)) {
     $heartbeat['state'] = 'waiting';
     $heartbeat['message'] = 'Scheduler attivo, prossima sincronizzazione non ancora dovuta';
     scheduler_write_heartbeat($heartbeatFile, $heartbeat);
