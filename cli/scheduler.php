@@ -105,7 +105,7 @@ if ($lastSyncAt && (time() - $lastSyncAt) < ($interval * 60)) {
     exit(0);
 }
 
-list($runStatus, $runRaw, $runError) = scheduler_http('POST', $baseUrl . '/api.php?route=scheduler/run', '{}');
+list($runStatus, $runRaw, $runError) = scheduler_http('POST', $baseUrl . '/api.php?route=scheduler/run', '{"triggered_by":"cron"}');
 $runJson = $runRaw !== '' ? json_decode($runRaw, true) : null;
 $heartbeat['last_http_code'] = $runStatus;
 $heartbeat['last_sync_at'] = date('Y-m-d H:i:s');
@@ -125,4 +125,12 @@ $heartbeat['last_run_id'] = isset($result['run_id']) ? $result['run_id'] : null;
 scheduler_write_heartbeat($heartbeatFile, $heartbeat);
 
 fwrite(STDOUT, $heartbeat['message'] . "\n");
+if (empty($result['success']) && !empty($result['details']) && is_array($result['details'])) {
+    foreach ($result['details'] as $machineName => $detail) {
+        if (is_array($detail) && empty($detail['success'])) {
+            $error = isset($detail['error']) && $detail['error'] !== '' ? $detail['error'] : 'macchina non raggiungibile o sincronizzazione fallita';
+            fwrite(STDOUT, '- ' . $machineName . ': ' . $error . "\n");
+        }
+    }
+}
 exit(!empty($result['success']) ? 0 : 2);
