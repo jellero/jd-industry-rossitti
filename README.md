@@ -12,6 +12,11 @@ Questa versione porta il prototipo iniziale verso un utilizzo operativo:
 - riallineamento automatico dello stato commesse quando la macchina segnala commessa corrente/chiusa;
 - apertura e chiusura multipla di commesse verso Maestro Active;
 - configurazione costi e report economico per commessa;
+- ricerca report per codice commessa, titolo o cliente con selezione rapida;
+- stampa report con layout A4 e salvataggio PDF tramite finestra di stampa;
+- dati aziendali e logo configurabili per l'intestazione dei report;
+- guida contestuale a fondo pagina in ogni area del gestionale;
+- creazione rapida di una commessa direttamente dalla pagina Cartella lavori;
 - pagina Scheduling per configurare frequenza, lookback e paginazione API;
 - supporto API Maestro Active v1/v2 determinato dalla configurazione della tabella `machines`.
 
@@ -51,6 +56,14 @@ Per aggiornare un database esistente importa:
 ```text
 database/migrations/20260928_production.sql
 ```
+
+Se il database contiene importazioni storiche effettuate con la vecchia associazione manuale, esegui anche:
+
+```text
+database/migrations/20260928_reconcile_production_jobs.sql
+```
+
+Questa seconda migration non cancella la produzione: rimuove solo le associazioni incompatibili e riassocia i record quando codice commessa e macchina coincidono.
 
 Il file con credenziali locali non viene versionato. Copia:
 
@@ -106,4 +119,4 @@ Il report commessa calcola il tempo come somma dei tempi effettivi dei pannelli 
 
 ## Sicurezza repository
 
-`app/config.local.php` e i file caricati in `public/uploads/misurazioni/` sono esclusi da Git. Il repository contiene solo il `.gitkeep` della cartella upload.
+`app/config.local.php`, i file caricati in `public/uploads/misurazioni/` e il logo caricato in `public/uploads/company/` sono esclusi da Git. Il repository contiene solo i `.gitkeep` delle cartelle upload.
