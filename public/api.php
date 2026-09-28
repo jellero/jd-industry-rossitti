@@ -115,7 +115,7 @@ function dashboard(): void
         FROM machines m LEFT JOIN machine_runtime mr ON mr.machine_id=m.id WHERE m.active=1 ORDER BY m.id")->fetchAll();
     $data['recent_jobs'] = $pdo->query("SELECT j.id,j.job_code,j.title,j.status,j.updated_at,j.created_at,c.company_name,m.name machine_name
         FROM jobs j JOIN clients c ON c.id=j.client_id LEFT JOIN machines m ON m.id=j.machine_id
-        ORDER BY FIELD(j.status,'in_lavorazione','aperta','bozza','chiusa','archiviata'), COALESCE(j.updated_at,j.created_at) DESC LIMIT 10")->fetchAll();
+        ORDER BY COALESCE(j.updated_at,j.created_at) DESC, j.id DESC LIMIT 10")->fetchAll();
     $data['refresh_seconds'] = max(5, min(120, Settings::getInt('dashboard.refresh_seconds', 10)));
     ApiResponse::ok($data);
 }
