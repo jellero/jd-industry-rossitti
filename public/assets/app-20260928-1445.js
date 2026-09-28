@@ -230,7 +230,8 @@ async function createFolderJob(e){
   }catch(err){toast(err.message,'error');}
 }
 
-async function loadScheduling(){ try{ const d=await api('scheduling'); renderScheduling(d); }catch(e){ /* migration may not yet be applied */ } }
+async function loadScheduling(){ try{ const d=await api('scheduling'); renderScheduling(d); updateSchedulerDashboardCard(d); }catch(e){ updateSchedulerDashboardCard(null); } }
+function updateSchedulerDashboardCard(d){ const cards=$('#dashboardCards'); if(!cards)return; let card=$('#dashboardSchedulerCard'); if(!card){ card=document.createElement('div'); card.id='dashboardSchedulerCard'; card.className='card metric'; cards.appendChild(card); } const r=d&&d.last_run; let status='Non rilevato'; let detail='Nessuna esecuzione automatica registrata'; if(d&&!d.enabled){ status='Disabilitato'; detail='Scheduling disattivato'; } else if(r){ if(r.triggered_by==='cron'){ status=r.success==1?'Attivo':'Attivo con errori'; detail='Ultimo automatico: '+fmtDateTime(r.started_at); } else { status='Da verificare'; detail='Ultima esecuzione manuale: '+fmtDateTime(r.started_at); } } card.innerHTML='<span>Scheduler</span><strong>'+esc(status)+'</strong><div class="muted small">'+esc(detail)+'</div>'; }
 function renderScheduling(d){ fillForm($('#schedulingForm'),d); state.refreshSeconds=Number(d.dashboard_refresh_seconds||10); const r=d.last_run; $('#schedulerLastRun').innerHTML=r?`<strong>${r.success==1?'Completata':'Con errori'}</strong><div>Avvio: ${esc(fmtDateTime(r.started_at))}</div><div>Macchine: ${esc(r.machines_ok)}/${esc(r.machines_total)}</div>${r.error_message?`<div class="error-text">${esc(r.error_message)}</div>`:''}`:'Nessuna esecuzione registrata.'; }
 async function runScheduler(){ try{ const d=await api('scheduler/run',{body:{}}); toast(d.success?'Sincronizzazione completata':'Sincronizzazione completata con errori',d.success?'ok':'error'); await Promise.all([loadScheduling(),loadDashboard(),loadJobs(),loadProduction()]); }catch(e){toast(e.message,'error');} }
 async function loadCosts(){ try{ const d=await api('costs'); fillForm($('#costForm'),d); }catch(e){} }
@@ -273,5 +274,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('JD Industry UI build 20260928-1445a');
+console.info('JD Industry UI build 20260928-1452');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
