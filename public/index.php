@@ -214,6 +214,6 @@ $assetVersion = static function (string $relative): string {
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app.js?v=<?= htmlspecialchars($assetVersion('assets/app.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
+<script src="assets/app-20260928-1235.js"></script>
 </body>
 </html>
