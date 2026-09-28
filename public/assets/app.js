@@ -44,6 +44,9 @@ function bindForms(){
   bind('#machineForm','submit',async e=>{ e.preventDefault(); try{ await api('machines',{body:formToObject(e.currentTarget)}); resetForm(e.currentTarget); await loadMachines(); toast('Macchina salvata'); }catch(err){toast(err.message,'error');} });
   bind('#schedulingForm','submit',async e=>{ e.preventDefault(); try{ const d=await api('scheduling',{body:formToObject(e.currentTarget)}); renderScheduling(d); toast('Scheduling salvato'); scheduleDashboardPolling(); }catch(err){toast(err.message,'error');} });
   bind('#costForm','submit',async e=>{ e.preventDefault(); try{ const d=await api('costs',{body:formToObject(e.currentTarget)}); fillForm(e.currentTarget,d); toast('Parametri costi salvati'); }catch(err){toast(err.message,'error');} });
+  bind('#companyForm','submit',async e=>{ e.preventDefault(); try{ state.company=await api('company-settings',{body:formToObject(e.currentTarget)}); renderCompanySettings(); renderCompanyReportHeader(); toast('Dati azienda salvati'); }catch(err){toast(err.message,'error');} });
+  bind('#companyLogoForm','submit',uploadCompanyLogo);
+  bind('#folderJobCreateForm','submit',createFolderJob);
 }
 function bindButtons(){
   bind('#btnRefresh','click',()=>refreshAll(true)); bind('#btnLiveRefresh','click',()=>refreshMachineLive(true));
