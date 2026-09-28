@@ -79,7 +79,8 @@ final class MachineSyncService
             $records = $client->normalizeProductionResponse($res);
             $seen += count($records);
             foreach ($records as $r) {
-                $jobId = $forcedJobId ?: $this->findJobByCode($r['remote_order_name']);
+                $jobId = $this->findJobByCode($r['remote_order_name']);
+                if ($forcedJobId !== null && $jobId !== $forcedJobId) continue;
                 $stmt = $this->pdo->prepare('INSERT IGNORE INTO production_records
                     (machine_id, job_id, remote_order_name, barcode, program_name, length_mm, width_mm, thickness_mm, passage, edge_name_lh, edge_consumption_lh, datetime_start, datetime_end, track_speed, raw_json, source_hash)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
