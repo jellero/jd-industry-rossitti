@@ -79,7 +79,7 @@ final class MachineSyncService
             $records = $client->normalizeProductionResponse($res);
             $seen += count($records);
             foreach ($records as $r) {
-                $jobId = $this->findJobByCode($r['remote_order_name']);
+                $jobId = $this->findJobByCode($r['remote_order_name'], (int)$machine['id']);
                 if ($forcedJobId !== null && $jobId !== $forcedJobId) continue;
                 $stmt = $this->pdo->prepare('INSERT IGNORE INTO production_records
                     (machine_id, job_id, remote_order_name, barcode, program_name, length_mm, width_mm, thickness_mm, passage, edge_name_lh, edge_consumption_lh, datetime_start, datetime_end, track_speed, raw_json, source_hash)
@@ -189,11 +189,11 @@ final class MachineSyncService
         }
     }
 
-    private function findJobByCode(?string $code): ?int
+    private function findJobByCode(?string $code, int $machineId): ?int
     {
         if ($code === null || trim($code) === '') return null;
-        $stmt = $this->pdo->prepare('SELECT id FROM jobs WHERE job_code=? LIMIT 1');
-        $stmt->execute([$code]);
+        $stmt = $this->pdo->prepare('SELECT id FROM jobs WHERE job_code=? AND (machine_id=? OR machine_id IS NULL) ORDER BY CASE WHEN machine_id=? THEN 0 ELSE 1 END LIMIT 1');
+        $stmt->execute([trim($code), $machineId, $machineId]);
         $id = $stmt->fetchColumn();
         return $id ? (int)$id : null;
     }
