@@ -1,11 +1,20 @@
+<?php
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+$assetVersion = static function (string $relative): string {
+    $path = __DIR__ . '/' . ltrim($relative, '/');
+    return is_file($path) ? (string) filemtime($path) : '20260928-1225';
+};
+?>
 <!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="app-build" content="20260928-1225">
   <title>Produzione - Commesse e Bordatrice</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="assets/style.css?v=20260928-1205">
+  <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
 <header class="topbar">
@@ -205,6 +214,6 @@
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app.js?v=20260928-1205"></script>
+<script src="assets/app.js?v=<?= htmlspecialchars($assetVersion('assets/app.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>
