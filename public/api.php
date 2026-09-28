@@ -32,6 +32,13 @@ try {
             if ($method === 'GET') costs_get();
             if ($method === 'POST') costs_save();
             break;
+        case 'company-settings':
+            if ($method === 'GET') company_settings_get();
+            if ($method === 'POST') company_settings_save();
+            break;
+        case 'company-logo':
+            if ($method === 'POST') company_logo_upload();
+            break;
         case 'reports/job':
             job_report();
             break;
@@ -605,6 +612,82 @@ function costs_save(): void
     }
     Settings::setMany($values);
     costs_get();
+}
+
+function company_settings_get(): void
+{
+    ApiResponse::ok([
+        'name' => Settings::get('company.name', ''),
+        'address' => Settings::get('company.address', ''),
+        'postal_code' => Settings::get('company.postal_code', ''),
+        'city' => Settings::get('company.city', ''),
+        'province' => Settings::get('company.province', ''),
+        'country' => Settings::get('company.country', 'Italia'),
+        'vat_number' => Settings::get('company.vat_number', ''),
+        'tax_code' => Settings::get('company.tax_code', ''),
+        'phone' => Settings::get('company.phone', ''),
+        'email' => Settings::get('company.email', ''),
+        'pec' => Settings::get('company.pec', ''),
+        'sdi' => Settings::get('company.sdi', ''),
+        'website' => Settings::get('company.website', ''),
+        'report_footer' => Settings::get('company.report_footer', ''),
+        'logo_path' => Settings::get('company.logo_path', ''),
+    ]);
+}
+
+function company_settings_save(): void
+{
+    $d = input_json();
+    $fields = ['name','address','postal_code','city','province','country','vat_number','tax_code','phone','email','pec','sdi','website','report_footer'];
+    $values = [];
+    foreach ($fields as $field) {
+        $values['company.' . $field] = str_or_null($d[$field] ?? null) ?? '';
+    }
+    Settings::setMany($values);
+    company_settings_get();
+}
+
+function company_logo_upload(): void
+{
+    if (!isset($_FILES['logo']) || !is_array($_FILES['logo'])) {
+        ApiResponse::error('File logo mancante', 400);
+    }
+    $file = $_FILES['logo'];
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        ApiResponse::error('Errore caricamento logo', 400);
+    }
+    if ((int)($file['size'] ?? 0) <= 0 || (int)$file['size'] > 2 * 1024 * 1024) {
+        ApiResponse::error('Il logo deve avere dimensione massima 2 MB', 400);
+    }
+
+    $mime = '';
+    if (class_exists('finfo')) {
+        $fi = new finfo(FILEINFO_MIME_TYPE);
+        $mime = (string)$fi->file($file['tmp_name']);
+    }
+    $allowed = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'];
+    if (!isset($allowed[$mime])) {
+        ApiResponse::error('Formato logo non supportato. Usa PNG, JPG o WebP', 400);
+    }
+
+    $dir = __DIR__ . '/uploads/company';
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('Impossibile creare la cartella del logo');
+    }
+
+    foreach (glob($dir . '/logo.*') ?: [] as $old) {
+        if (is_file($old)) @unlink($old);
+    }
+
+    $filename = 'logo.' . $allowed[$mime];
+    $destination = $dir . '/' . $filename;
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        throw new RuntimeException('Impossibile salvare il logo');
+    }
+
+    $relative = 'uploads/company/' . $filename;
+    Settings::setMany(['company.logo_path' => $relative]);
+    ApiResponse::ok(['logo_path' => $relative]);
 }
 
 function job_report(): void
