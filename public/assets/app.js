@@ -36,7 +36,7 @@ function renderTable(table,cols,rows,actions=null){ if(!table)return; const head
 function badge(status){ return `<span class="badge ${esc(status)}">${esc(String(status||'').replaceAll('_',' '))}</span>`; }
 
 async function bootstrap(){ bindTabs(); bindForms(); bindButtons(); setDefaultDateTimes(); await loadBaseData(); await Promise.all([loadDashboard(),loadJobs(),loadFiles(),loadProduction(),loadScheduling(),loadCosts()]); scheduleDashboardPolling(); }
-function bindTabs(){ $('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{ $('.tabs button').forEach(b=>b.classList.remove('active')); $('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); const tab=$('#tab-'+btn.dataset.tab); if(tab)tab.classList.add('active'); })); }
+function bindTabs(){ all('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{ all('.tabs button').forEach(b=>b.classList.remove('active')); all('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); const tab=$('#tab-'+btn.dataset.tab); if(tab)tab.classList.add('active'); })); }
 function bindForms(){
   bind('#clientForm','submit',async e=>{ e.preventDefault(); try{ await api('clients',{body:formToObject(e.currentTarget)}); resetForm(e.currentTarget); await loadClients(); await loadJobs(); toast('Cliente salvato'); }catch(err){toast(err.message,'error');} });
   bind('#jobForm','submit',async e=>{ e.preventDefault(); try{ await api('jobs',{body:formToObject(e.currentTarget)}); resetForm(e.currentTarget); await loadJobs(); await loadDashboard(); toast('Commessa salvata'); }catch(err){toast(err.message,'error');} });
@@ -95,5 +95,5 @@ function renderScheduling(d){ fillForm($('#schedulingForm'),d); state.refreshSec
 async function runScheduler(){ try{ const d=await api('scheduler/run',{body:{}}); toast(d.success?'Sincronizzazione completata':'Sincronizzazione completata con errori',d.success?'ok':'error'); await Promise.all([loadScheduling(),loadDashboard(),loadJobs(),loadProduction()]); }catch(e){toast(e.message,'error');} }
 async function loadCosts(){ try{ const d=await api('costs'); fillForm($('#costForm'),d); }catch(e){} }
 
-console.info('JD Industry UI build 20260928-1225');
+console.info('JD Industry UI build 20260928-1305');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
