@@ -90,7 +90,92 @@ async function importProduction(){ try{ const d=await api('maestro/import-produc
 async function loadProduction(jobId=null,table=$('#productionTable')){ const q={}; if(jobId)q.job_id=jobId; const rows=await api('production',{query:q}); renderProduction(table,rows); }
 function renderProduction(table,rows){ renderTable(table,[{label:'Inizio',render:r=>fmtDateTime(r.datetime_start)},{label:'Commessa',render:r=>esc(r.remote_order_name||r.job_code)},{label:'Cliente',key:'company_name'},{label:'Programma',key:'program_name'},{label:'Misure mm',render:r=>`${esc(r.length_mm||'—')} × ${esc(r.width_mm||'—')} × ${esc(r.thickness_mm||'—')}`},{label:'Bordo',key:'edge_name_lh'},{label:'Consumo',render:r=>r.edge_consumption_lh?fmtNumber(r.edge_consumption_lh,1)+' mm':'—'}],rows); }
 
-async function loadReport(){ const jobId=$('#reportJob').value; if(!jobId)return toast('Seleziona una commessa','error'); try{ const [r,prod]=await Promise.all([api('reports/job',{query:{job_id:jobId}}),api('production',{query:{job_id:jobId}})]); $('#reportHeader').classList.remove('empty-state'); $('#reportHeader').innerHTML=`<div><strong>${esc(r.job.job_code)} · ${esc(r.job.title)}</strong><div>${esc(r.job.company_name)} · ${esc(r.job.machine_name||'Nessuna macchina')}</div></div>${badge(r.job.status)}`; const p=r.production,c=r.costs; $('#reportCards').innerHTML=[['Pannelli',p.panels],['Tempo macchina',fmtDuration(p.process_seconds)],['Bordo consumato',fmtNumber(p.edge_meters,2)+' m'],['Costo totale',fmtMoney(c.total)]].map(([l,v])=>`<div class="card metric"><span>${esc(l)}</span><strong>${esc(v)}</strong></div>`).join(''); $('#reportCosts').innerHTML=`<div class="cost-grid"><div><span>Macchina</span><b>${fmtMoney(c.machine)}</b></div><div><span>Bordo</span><b>${fmtMoney(c.edge)}</b></div><div><span>Fisso</span><b>${fmtMoney(c.fixed)}</b></div><div><span>Subtotale</span><b>${fmtMoney(c.subtotal)}</b></div><div><span>Generali</span><b>${fmtMoney(c.overhead)}</b></div><div class="total"><span>Totale</span><b>${fmtMoney(c.total)}</b></div></div>`; renderTable($('#reportEdgesTable'),[{label:'Bordo',key:'edge_name'},{label:'Pannelli',key:'panels'},{label:'Consumo',render:x=>fmtNumber(Number(x.edge_mm)/1000,3)+' m'}],p.edges||[]); renderProduction($('#reportProductionTable'),prod); }catch(e){toast(e.message,'error');} }
+function onReportSearchInput(){
+  state.reportJobId=null;
+  $('#reportJobId').value='';
+  $('#btnReportPrint').disabled=true;
+  clearTimeout(state.reportSearchTimer);
+  const q=$('#reportSearch').value.trim();
+  if(!q){ $('#reportSearchResults').hidden=true; return; }
+  state.reportSearchTimer=setTimeout(searchReportJobs,180);
+}
+async function searchReportJobs(){
+  const q=$('#reportSearch').value.trim();
+  if(!q)return;
+  try{
+    const rows=await api('jobs',{query:{q:q}});
+    const box=$('#reportSearchResults');
+    box.innerHTML=rows.slice(0,15).map(function(r){
+      return '<button type="button" class="autocomplete-item" data-report-result="'+esc(r.id)+'"><strong>'+esc(r.job_code)+'</strong><span>'+esc(r.title||'')+'</span><small>'+esc(r.company_name)+' · '+esc(r.machine_name||'Nessuna macchina')+' · '+esc(String(r.status||'').replaceAll('_',' '))+'</small></button>';
+    }).join('') || '<div class="autocomplete-empty">Nessuna commessa trovata.</div>';
+    box.hidden=false;
+    all('[data-report-result]',box).forEach(function(b){
+      b.addEventListener('click',function(){
+        const job=rows.find(function(r){ return String(r.id)===String(b.dataset.reportResult); });
+        if(job)selectReportJob(job,true);
+      });
+    });
+  }catch(e){toast(e.message,'error');}
+}
+function selectReportJob(job,autoLoad){
+  if(autoLoad===undefined)autoLoad=true;
+  state.reportJobId=Number(job.id);
+  $('#reportJobId').value=String(job.id);
+  $('#reportSearch').value=String(job.job_code||'')+' — '+String(job.company_name||'');
+  $('#reportSearchResults').hidden=true;
+  if(autoLoad)loadReport(job.id);
+}
+async function loadReport(jobIdOverride){
+  const jobId=Number(jobIdOverride||state.reportJobId||$('#reportJobId').value||0);
+  if(!jobId)return toast('Cerca e seleziona una commessa','error');
+  try{
+    const result=await Promise.all([
+      api('reports/job',{query:{job_id:jobId}}),
+      api('production',{query:{job_id:jobId}})
+    ]);
+    const r=result[0], prod=result[1];
+    state.reportJobId=jobId;
+    $('#reportHeader').classList.remove('empty-state');
+    $('#reportHeader').innerHTML='<div><strong>'+esc(r.job.job_code)+' · '+esc(r.job.title)+'</strong><div>'+esc(r.job.company_name)+' · '+esc(r.job.machine_name||'Nessuna macchina')+'</div></div>'+badge(r.job.status);
+    const p=r.production, costs=r.costs;
+    $('#reportCards').innerHTML=[
+      ['Pannelli',p.panels],
+      ['Tempo macchina',fmtDuration(p.process_seconds)],
+      ['Bordo consumato',fmtNumber(p.edge_meters,2)+' m'],
+      ['Costo totale',fmtMoney(costs.total)]
+    ].map(function(item){ return '<div class="card metric"><span>'+esc(item[0])+'</span><strong>'+esc(item[1])+'</strong></div>'; }).join('');
+    $('#reportCosts').innerHTML='<div class="cost-grid"><div><span>Macchina</span><b>'+fmtMoney(costs.machine)+'</b></div><div><span>Bordo</span><b>'+fmtMoney(costs.edge)+'</b></div><div><span>Fisso</span><b>'+fmtMoney(costs.fixed)+'</b></div><div><span>Subtotale</span><b>'+fmtMoney(costs.subtotal)+'</b></div><div><span>Generali</span><b>'+fmtMoney(costs.overhead)+'</b></div><div class="total"><span>Totale</span><b>'+fmtMoney(costs.total)+'</b></div></div>';
+    renderTable($('#reportEdgesTable'),[
+      {label:'Bordo',key:'edge_name'},
+      {label:'Pannelli',key:'panels'},
+      {label:'Consumo',render:function(x){ return fmtNumber(Number(x.edge_mm)/1000,3)+' m'; }}
+    ],p.edges||[]);
+    renderProduction($('#reportProductionTable'),prod);
+    renderCompanyReportHeader();
+    $('#btnReportPrint').disabled=false;
+  }catch(e){toast(e.message,'error');}
+}
+function printReport(){
+  if(!state.reportJobId)return toast('Genera prima un report','error');
+  window.print();
+}
+function renderCompanyReportHeader(){
+  const el=$('#reportCompanyHeader');
+  if(!el)return;
+  const d=state.company||{};
+  const city=[d.postal_code,d.city].filter(Boolean).join(' ');
+  const address=[d.address,city,d.province,d.country].filter(Boolean).join(' · ');
+  const fiscal=[d.vat_number?'P. IVA '+d.vat_number:'',d.tax_code?'C.F. '+d.tax_code:''].filter(Boolean).join(' · ');
+  const contacts=[d.phone,d.email,d.pec?'PEC '+d.pec:'',d.sdi?'SDI '+d.sdi:'',d.website].filter(Boolean).join(' · ');
+  const logo=d.logo_path?'<img src="'+esc(d.logo_path)+'" alt="Logo aziendale">':'';
+  let html='<div class="report-company-main">'+logo+'<div><strong>'+esc(d.name||'')+'</strong>';
+  if(address)html+='<div>'+esc(address)+'</div>';
+  if(fiscal)html+='<div>'+esc(fiscal)+'</div>';
+  if(contacts)html+='<div>'+esc(contacts)+'</div>';
+  html+='</div></div>';
+  if(d.report_footer)html+='<div class="report-company-note">'+esc(d.report_footer)+'</div>';
+  el.innerHTML=html;
+}
 
 async function scanFiles(){ try{ const d=await api('files/scan',{query:{machine_id:$('#folderMachine').value}}); toast(`Nuovi ${d.created}, aggiornati ${d.updated}, visti ${d.seen}`); await Promise.all([loadFiles(),loadDashboard()]); }catch(e){toast(e.message,'error');} }
 async function loadFiles(){ if(!$('#fileAssignedFilter'))return; const q={assigned:$('#fileAssignedFilter').value,q:$('#fileSearch').value||''}; state.files=await api('files',{query:q}); renderTable($('#filesTable'),[{label:'',render:r=>`<input type="radio" name="selectedFile" value="${r.id}" ${state.selectedFileId==r.id?'checked':''}>`},{label:'Nome',key:'file_name'},{label:'Percorso',key:'relative_path'},{label:'Dimensione',render:r=>fmtBytes(r.size_bytes)},{label:'Modificato',render:r=>fmtDateTime(r.modified_at)},{label:'Associato a',render:r=>r.job_code?`${esc(r.job_code)} - ${esc(r.company_name)}`:'<span class="badge new">Nuovo</span>'}],state.files); all('input[name="selectedFile"]').forEach(r=>r.addEventListener('change',()=>state.selectedFileId=r.value)); }
