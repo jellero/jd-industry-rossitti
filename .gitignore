@@ -3,3 +3,6 @@ public/uploads/misurazioni/*
 !public/uploads/misurazioni/.gitkeep
 *.log
 .DS_Store
+
+public/uploads/company/*
+!public/uploads/company/.gitkeep
