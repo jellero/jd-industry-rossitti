@@ -245,6 +245,7 @@ async function loadCompanySettings(){
 function renderCompanySettings(){
   const form=$('#companyForm');
   if(form)fillForm(form,state.company||{});
+  const header=$('#headerCompanyName'); if(header)header.textContent=(state.company&&state.company.name)?state.company.name:'Sistema gestionale';
   const box=$('#companyLogoPreview');
   if(box){
     if(state.company&&state.company.logo_path){
