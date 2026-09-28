@@ -230,7 +230,7 @@ async function createFolderJob(e){
   }catch(err){toast(err.message,'error');}
 }
 
-async function loadScheduling(){ try{ const d=await api('scheduling'); renderScheduling(d); }catch(e){ /* migration may not yet be applied */ } }
+async function loadScheduling(){ try{ const d=await api('scheduling'); renderScheduling(d); const r=d.last_run, cards=$('#dashboardCards'); if(cards){ const old=$('#dashboardSchedulerCard'); if(old)old.remove(); const txt=!d.enabled?'Disabilitato':(!r?'Non avviato':(r.success==1?'Attivo':'Con errori')); cards.insertAdjacentHTML('beforeend',`<div class="card metric" id="dashboardSchedulerCard"><span>Scheduler</span><strong>${esc(txt)}</strong><div class="muted small">${r?esc(fmtDateTime(r.started_at)):'Nessuna esecuzione registrata'}</div></div>`); } }catch(e){ /* migration may not yet be applied */ } }
 function renderScheduling(d){ fillForm($('#schedulingForm'),d); state.refreshSeconds=Number(d.dashboard_refresh_seconds||10); const r=d.last_run; $('#schedulerLastRun').innerHTML=r?`<strong>${r.success==1?'Completata':'Con errori'}</strong><div>Avvio: ${esc(fmtDateTime(r.started_at))}</div><div>Macchine: ${esc(r.machines_ok)}/${esc(r.machines_total)}</div>${r.error_message?`<div class="error-text">${esc(r.error_message)}</div>`:''}`:'Nessuna esecuzione registrata.'; }
 async function runScheduler(){ try{ const d=await api('scheduler/run',{body:{}}); toast(d.success?'Sincronizzazione completata':'Sincronizzazione completata con errori',d.success?'ok':'error'); await Promise.all([loadScheduling(),loadDashboard(),loadJobs(),loadProduction()]); }catch(e){toast(e.message,'error');} }
 async function loadCosts(){ try{ const d=await api('costs'); fillForm($('#costForm'),d); }catch(e){} }
