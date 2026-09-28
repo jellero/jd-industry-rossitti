@@ -273,5 +273,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('JD Industry UI build 20260928-1445');
+console.info('JD Industry UI build 20260928-1446');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
