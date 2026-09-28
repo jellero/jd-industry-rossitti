@@ -167,7 +167,7 @@ final class MachineSyncService
         $current = $status['current_order'];
         $remoteStatus = strtolower((string)($status['order_status'] ?? ''));
         if ($current) {
-            $jobId = $this->findJobByCode($current);
+            $jobId = $this->findJobByCode($current, $machineId);
             if ($jobId) {
                 $newStatus = $remoteStatus === 'running' ? 'in_lavorazione' : ($remoteStatus === 'ended' ? 'chiusa' : null);
                 if ($newStatus) {
@@ -180,7 +180,7 @@ final class MachineSyncService
 
         $lastClosed = $status['last_order_closed'];
         if ($lastClosed) {
-            $jobId = $this->findJobByCode($lastClosed);
+            $jobId = $this->findJobByCode($lastClosed, $machineId);
             if ($jobId) {
                 $now = date('Y-m-d H:i:s');
                 $this->pdo->prepare("UPDATE jobs SET machine_id=?, status='chiusa', closed_at=COALESCE(closed_at, ?) WHERE id=?")
