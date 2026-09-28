@@ -56,9 +56,12 @@ function bindButtons(){
   bind('#btnBulkOpen','click',()=>bulkOrder('open')); bind('#btnBulkClose','click',()=>bulkOrder('close'));
   bind('#btnMaestroInfo','click',maestroInfo); bind('#btnMaestroStatus','click',maestroStatus);
   bind('#btnOrderOpen','click',()=>maestroOrder('open')); bind('#btnOrderActivate','click',()=>maestroOrder('activate')); bind('#btnOrderClose','click',()=>maestroOrder('close'));
-  bind('#btnImportProduction','click',importProduction); bind('#btnReportLoad','click',loadReport);
+  bind('#btnImportProduction','click',importProduction); bind('#btnReportLoad','click',()=>loadReport()); bind('#btnReportPrint','click',printReport);
+  bind('#reportSearch','input',onReportSearchInput); bind('#reportSearch','focus',()=>{ if($('#reportSearch').value.trim()) searchReportJobs(); });
   bind('#btnScanFiles','click',scanFiles); bind('#btnFilesRefresh','click',loadFiles); bind('#fileAssignedFilter','change',loadFiles); bind('#fileSearch','keydown',e=>{if(e.key==='Enter')loadFiles();});
   bind('#btnAssignFile','click',assignFile); bind('#btnUnassignFile','click',unassignFile); bind('#btnSchedulerRun','click',runScheduler);
+  bind('#btnFolderJobCreateToggle','click',()=>toggleFolderJobCreate(true)); bind('#btnFolderJobCreateCancel','click',()=>toggleFolderJobCreate(false));
+  document.addEventListener('click',e=>{ const box=$('#reportSearchResults'), input=$('#reportSearch'); if(box&&input&&!box.contains(e.target)&&e.target!==input)box.hidden=true; });
 }
 function setDefaultDateTimes(){ const now=new Date(), start=new Date(now.getTime()-24*3600*1000); const from=$('#prodFrom'), to=$('#prodTo'); if(from)from.value=toLocalInput(start); if(to)to.value=toLocalInput(now); }
 function toLocalInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
