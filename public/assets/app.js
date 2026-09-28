@@ -3,6 +3,7 @@
 const state = {
   clients: [], jobTypes: [], machines: [], jobs: [], files: [], selectedFileId: null,
   selectedJobs: new Set(), dashboardTimer: null, refreshSeconds: 10,
+  company: {}, reportSearchTimer: null, reportJobId: null,
 };
 const $ = (sel, root = document) => root.querySelector(sel);
 const all = (sel, root = document) => Array.from(root.querySelectorAll(sel));
