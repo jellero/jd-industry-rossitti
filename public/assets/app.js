@@ -235,5 +235,42 @@ function renderScheduling(d){ fillForm($('#schedulingForm'),d); state.refreshSec
 async function runScheduler(){ try{ const d=await api('scheduler/run',{body:{}}); toast(d.success?'Sincronizzazione completata':'Sincronizzazione completata con errori',d.success?'ok':'error'); await Promise.all([loadScheduling(),loadDashboard(),loadJobs(),loadProduction()]); }catch(e){toast(e.message,'error');} }
 async function loadCosts(){ try{ const d=await api('costs'); fillForm($('#costForm'),d); }catch(e){} }
 
-console.info('JD Industry UI build 20260928-1305');
+async function loadCompanySettings(){
+  try{
+    state.company=await api('company-settings');
+    renderCompanySettings();
+    renderCompanyReportHeader();
+  }catch(e){}
+}
+function renderCompanySettings(){
+  const form=$('#companyForm');
+  if(form)fillForm(form,state.company||{});
+  const box=$('#companyLogoPreview');
+  if(box){
+    if(state.company&&state.company.logo_path){
+      box.innerHTML='<img src="'+esc(state.company.logo_path)+'?v='+Date.now()+'" alt="Logo aziendale">';
+    }else{
+      box.textContent='Nessun logo configurato.';
+    }
+  }
+}
+async function uploadCompanyLogo(e){
+  e.preventDefault();
+  const input=$('#companyLogoFile');
+  if(!input||!input.files||!input.files.length)return toast('Seleziona un logo','error');
+  try{
+    const fd=new FormData();
+    fd.append('logo',input.files[0]);
+    const res=await fetch('api.php?route=company-logo',{method:'POST',body:fd,cache:'no-store'});
+    const json=await res.json().catch(function(){ return {ok:false,error:'Risposta server non JSON'}; });
+    if(!res.ok||!json.ok)throw new Error(json.error||('Errore HTTP '+res.status));
+    state.company.logo_path=json.data.logo_path;
+    input.value='';
+    renderCompanySettings();
+    renderCompanyReportHeader();
+    toast('Logo aziendale aggiornato');
+  }catch(err){toast(err.message,'error');}
+}
+
+console.info('JD Industry UI build 20260928-1435');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
