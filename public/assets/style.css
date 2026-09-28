@@ -12,3 +12,46 @@ button{border:0;background:var(--primary);color:#fff;border-radius:8px;padding:1
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;background:#f2f4f7;color:#344054;text-transform:capitalize}.badge.bozza{background:#f2f4f7}.badge.aperta{background:var(--primary-soft);color:#175cd3}.badge.in_lavorazione{background:var(--warn-soft);color:var(--warn)}.badge.chiusa{background:var(--ok-soft);color:var(--ok)}.badge.archiviata{background:#eaecf0;color:#475467}.badge.new{background:var(--danger-soft);color:var(--danger)}.badge.online{background:var(--ok-soft);color:var(--ok)}.badge.offline{background:#f2f4f7;color:#475467}
 .output{min-height:110px;max-height:360px;overflow:auto;background:#0b1220;color:#d1e7ff;border-radius:9px;padding:14px;white-space:pre-wrap;font-size:12px}.muted{color:var(--muted)}.small{font-size:11px}.error-text{color:var(--danger)}.inline-result{margin-top:8px;font-size:13px}.info-box,.empty-state{background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:15px;color:#475467}.status-summary{display:flex;gap:12px;align-items:center;margin:16px 0}.status-pill{border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800}.status-pill.working{background:var(--ok-soft);color:var(--ok)}.status-pill.ready{background:var(--primary-soft);color:var(--primary)}.status-pill.alarm{background:var(--danger-soft);color:var(--danger)}details{margin-top:10px}summary{cursor:pointer;color:#475467;font-weight:700;font-size:13px}.report-header{display:flex;justify-content:space-between;align-items:center;margin:16px 0}.report-header strong{font-size:18px}.cost-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:16px 0}.cost-grid div{background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:11px}.cost-grid span{display:block;font-size:11px;color:var(--muted)}.cost-grid b{display:block;margin-top:4px}.cost-grid .total{background:var(--primary-soft);border-color:#b2ccff}.toast{position:fixed;right:18px;bottom:18px;z-index:30;background:var(--dark);color:#fff;padding:12px 15px;border-radius:10px;box-shadow:0 12px 30px rgba(16,24,40,.25);opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s;max-width:520px}.toast.show{opacity:1;transform:none}.toast.error{background:var(--danger)}.toast.ok{background:var(--ok)}code{background:#f2f4f7;border-radius:5px;padding:2px 5px}
 @media(max-width:1050px){.two-col{grid-template-columns:1fr}.cost-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){main{padding:14px}.topbar{padding:18px;align-items:flex-start;flex-direction:column}.top-actions{width:100%;justify-content:space-between}.page-head{align-items:flex-start;flex-direction:column}.row,.toolbar{flex-direction:column;align-items:stretch}.machine-kpis{grid-template-columns:1fr}.cost-grid{grid-template-columns:1fr 1fr}.tabs{padding:8px}.grid.cards{grid-template-columns:1fr 1fr}}
+
+
+/* Workflow produzione */
+.report-controls{position:relative;display:grid;gap:10px;margin-bottom:18px;max-width:760px}
+.report-search-label{position:relative}
+.autocomplete-list{position:absolute;left:0;right:0;top:69px;z-index:20;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 40px rgba(16,24,40,.16);max-height:360px;overflow:auto;padding:5px}
+.autocomplete-item{display:grid;width:100%;text-align:left;background:#fff;color:var(--text);border:0;border-radius:8px;padding:10px 12px;white-space:normal}
+.autocomplete-item:hover{background:#f2f4f7;filter:none}
+.autocomplete-item strong,.autocomplete-item span,.autocomplete-item small{display:block}
+.autocomplete-item span{font-size:13px;margin-top:2px}
+.autocomplete-item small{font-size:11px;color:var(--muted);margin-top:3px}
+.autocomplete-empty{padding:12px;color:var(--muted);font-size:13px}
+.report-company-header{border-bottom:2px solid var(--line);padding:0 0 14px;margin:4px 0 18px}
+.report-company-main{display:flex;align-items:flex-start;gap:18px}
+.report-company-main img{width:auto;max-width:180px;height:auto;max-height:72px;object-fit:contain}
+.report-company-main strong{display:block;font-size:20px;margin-bottom:4px}
+.report-company-main div div{font-size:12px;line-height:1.5;color:#475467}
+.report-company-note{border-top:1px solid var(--line);margin-top:10px;padding-top:8px;font-size:11px;color:var(--muted)}
+.logo-preview{min-height:120px;display:flex;align-items:center;justify-content:center;border:1px dashed #d0d5dd;border-radius:10px;background:#f9fafb;color:var(--muted);padding:16px}
+.logo-preview img{max-width:280px;max-height:120px;object-fit:contain}
+.inline-create{margin:14px 0 18px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#f9fafb}
+.page-help{margin:18px 0 4px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 14px}
+.page-help summary{padding:12px 0;color:#344054}
+.page-help p{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.55}
+
+@media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff;font-size:10pt}
+  body *{visibility:hidden}
+  #reportDocument,#reportDocument *{visibility:visible}
+  #reportDocument{position:absolute;left:0;top:0;width:100%;background:#fff}
+  .report-company-header{display:block}
+  #reportDocument .table-wrap{overflow:visible;border:0}
+  #reportDocument table{min-width:0;font-size:8.5pt}
+  #reportDocument th,#reportDocument td{padding:5px 6px}
+  #reportDocument .grid.cards{grid-template-columns:repeat(4,1fr)}
+  #reportDocument .card{box-shadow:none;padding:9px}
+  #reportDocument .card.metric strong{font-size:16pt}
+  #reportDocument .cost-grid{grid-template-columns:repeat(6,1fr)}
+  #reportDocument .cost-grid div{padding:7px}
+  #reportDocument tr{break-inside:avoid}
+  #reportDocument h3{break-after:avoid}
+}
