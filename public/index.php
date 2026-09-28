@@ -12,16 +12,16 @@ $assetVersion = static function (string $relative): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="app-build" content="20260928-1435">
-  <title>Gestionale Produzione</title>
+  <title>Gestione Commesse e Produzione</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body>
 <header class="topbar">
   <div>
-    <div class="eyebrow">JD Industry</div>
-    <h1>Gestionale Produzione</h1>
-    <p>Gestione commesse, macchine, lavorazioni e reportistica</p>
+    <div class="eyebrow" id="headerCompanyName">Sistema gestionale</div>
+    <h1>Gestione Commesse e Produzione</h1>
+    <p>Controllo operativo di commesse, macchine, lavorazioni e costi</p>
   </div>
   <div class="top-actions">
     <span id="lastRefresh" class="muted-light">Mai aggiornato</span>
