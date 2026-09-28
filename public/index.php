@@ -276,6 +276,6 @@ $assetVersion = static function (string $relative): string {
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app-20260928-1445.js"></script>
+<script src="assets/app-20260928-1445.js?v=1452"></script>
 </body>
 </html>
