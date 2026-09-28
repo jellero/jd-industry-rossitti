@@ -182,6 +182,54 @@ async function loadFiles(){ if(!$('#fileAssignedFilter'))return; const q={assign
 async function assignFile(){ if(!state.selectedFileId)return toast('Seleziona un file','error'); if(!$('#assignJob').value)return toast('Seleziona una commessa','error'); try{await api('files/assign',{body:{file_id:state.selectedFileId,job_id:$('#assignJob').value}}); state.selectedFileId=null; await Promise.all([loadFiles(),loadDashboard()]); toast('File associato');}catch(e){toast(e.message,'error');} }
 async function unassignFile(){ if(!state.selectedFileId)return toast('Seleziona un file','error'); try{await api('files/unassign',{body:{file_id:state.selectedFileId}}); state.selectedFileId=null; await Promise.all([loadFiles(),loadDashboard()]); toast('Associazione rimossa');}catch(e){toast(e.message,'error');} }
 
+function toggleFolderJobCreate(show){
+  const form=$('#folderJobCreateForm');
+  if(!form)return;
+  form.hidden=!show;
+  if(show){
+    const firstType=state.jobTypes.find(function(t){ return t.source_type==='SMB_FOLDER'; });
+    if(firstType)$('#folderNewType').value=String(firstType.id);
+    $('#folderNewCode')?.focus();
+  }else{
+    form.reset();
+    updateSelects();
+  }
+}
+async function createFolderJob(e){
+  e.preventDefault();
+  const machineId=Number($('#folderMachine').value||0);
+  const clientId=Number($('#folderNewClient').value||0);
+  const typeId=Number($('#folderNewType').value||0);
+  const code=$('#folderNewCode').value.trim();
+  const title=$('#folderNewTitle').value.trim();
+  if(!machineId||!clientId||!typeId||!code||!title)return toast('Compila cliente, tipo, codice e titolo','error');
+  try{
+    const created=await api('jobs',{body:{
+      client_id:clientId,
+      job_type_id:typeId,
+      machine_id:machineId,
+      job_code:code,
+      title:title,
+      status:'aperta',
+      notes:$('#folderNewNotes').value.trim()
+    }});
+    const rows=await api('jobs',{query:{q:code}});
+    const job=rows.find(function(r){ return Number(r.id)===Number(created.id); });
+    if(job&&!state.jobs.some(function(r){ return Number(r.id)===Number(job.id); }))state.jobs.unshift(job);
+    updateSelects();
+    $('#assignJob').value=String(created.id);
+    if(state.selectedFileId){
+      await api('files/assign',{body:{file_id:state.selectedFileId,job_id:created.id}});
+      state.selectedFileId=null;
+      await Promise.all([loadFiles(),loadDashboard()]);
+      toast('Commessa creata e file associato');
+    }else{
+      toast('Commessa creata e selezionata');
+    }
+    toggleFolderJobCreate(false);
+  }catch(err){toast(err.message,'error');}
+}
+
 async function loadScheduling(){ try{ const d=await api('scheduling'); renderScheduling(d); }catch(e){ /* migration may not yet be applied */ } }
 function renderScheduling(d){ fillForm($('#schedulingForm'),d); state.refreshSeconds=Number(d.dashboard_refresh_seconds||10); const r=d.last_run; $('#schedulerLastRun').innerHTML=r?`<strong>${r.success==1?'Completata':'Con errori'}</strong><div>Avvio: ${esc(fmtDateTime(r.started_at))}</div><div>Macchine: ${esc(r.machines_ok)}/${esc(r.machines_total)}</div>${r.error_message?`<div class="error-text">${esc(r.error_message)}</div>`:''}`:'Nessuna esecuzione registrata.'; }
 async function runScheduler(){ try{ const d=await api('scheduler/run',{body:{}}); toast(d.success?'Sincronizzazione completata':'Sincronizzazione completata con errori',d.success?'ok':'error'); await Promise.all([loadScheduling(),loadDashboard(),loadJobs(),loadProduction()]); }catch(e){toast(e.message,'error');} }
