@@ -11,8 +11,8 @@ $assetVersion = static function (string $relative): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="app-build" content="20260928-1305">
-  <title>Produzione - Commesse e Bordatrice</title>
+  <meta name="app-build" content="20260928-1435">
+  <title>Gestionale Produzione</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
 </head>
@@ -20,8 +20,8 @@ $assetVersion = static function (string $relative): string {
 <header class="topbar">
   <div>
     <div class="eyebrow">JD Industry</div>
-    <h1>Produzione</h1>
-    <p>Commesse, bordatrice e raccolta dati automatica</p>
+    <h1>Gestionale Produzione</h1>
+    <p>Gestione commesse, macchine, lavorazioni e reportistica</p>
   </div>
   <div class="top-actions">
     <span id="lastRefresh" class="muted-light">Mai aggiornato</span>
@@ -38,6 +38,7 @@ $assetVersion = static function (string $relative): string {
   <button data-tab="folder">Cartella lavori</button>
   <button data-tab="scheduling">Scheduling</button>
   <button data-tab="costs">Costi</button>
+  <button data-tab="company">Dati azienda</button>
   <button data-tab="settings">Impostazioni</button>
 </nav>
 
@@ -51,9 +52,10 @@ $assetVersion = static function (string $relative): string {
     <h3 class="section-title">Macchine</h3>
     <div id="machineCards" class="machine-grid"></div>
     <div class="panel">
-      <div class="panel-head"><div><h3>Commesse recenti</h3><p class="muted">Le commesse in lavorazione e aperte sono mostrate per prime.</p></div></div>
+      <div class="panel-head"><div><h3>Commesse recenti</h3><p class="muted">Ordinate dalla più recente alla meno recente.</p></div></div>
       <div class="table-wrap"><table id="dashboardJobsTable"></table></div>
     </div>
+    <details class="page-help"><summary>Guida Dashboard</summary><p>Controlla lo stato delle macchine, le commesse più recenti e gli indicatori principali. Usa “Aggiorna macchine” per forzare una lettura immediata delle macchine connesse.</p></details>
   </section>
 
   <section id="tab-jobs" class="tab">
@@ -97,6 +99,7 @@ $assetVersion = static function (string $relative): string {
         <div class="table-wrap"><table id="jobsTable"></table></div>
       </div>
     </div>
+    <details class="page-help"><summary>Guida Commesse</summary><p>Crea e modifica le commesse, filtra l’elenco e seleziona più commesse per inviarle alla bordatrice. Lo stato viene aggiornato anche dalle sincronizzazioni automatiche quando la macchina è raggiungibile.</p></details>
   </section>
 
   <section id="tab-maestro" class="tab">
@@ -125,20 +128,35 @@ $assetVersion = static function (string $relative): string {
       </div>
       <div class="table-wrap"><table id="productionTable"></table></div>
     </div>
+    <details class="page-help"><summary>Guida Bordatrice</summary><p>Usa questa pagina per comandi manuali, verifica dello stato e recuperi storici. L’importazione con una commessa selezionata filtra i dati: non forza più associazioni incompatibili.</p></details>
   </section>
 
   <section id="tab-reports" class="tab">
     <div class="page-head"><div><h2>Report commessa</h2><p>Produzione, tempi, consumo bordo e costo configurato.</p></div></div>
     <div class="panel">
-      <div class="row wrap"><label>Commessa<select id="reportJob"></select></label><button id="btnReportLoad">Genera report</button></div>
-      <div id="reportHeader" class="report-header empty-state">Seleziona una commessa.</div>
-      <div id="reportCards" class="grid cards"></div>
-      <div id="reportCosts"></div>
-      <h3>Consumo bordo</h3>
-      <div class="table-wrap"><table id="reportEdgesTable"></table></div>
-      <h3>Dettaglio produzione</h3>
-      <div class="table-wrap"><table id="reportProductionTable"></table></div>
+      <div class="report-controls">
+        <label class="report-search-label">Cerca commessa o cliente
+          <input id="reportSearch" autocomplete="off" placeholder="Digita codice commessa, titolo o cliente">
+        </label>
+        <input type="hidden" id="reportJobId">
+        <div id="reportSearchResults" class="autocomplete-list" hidden></div>
+        <div class="row wrap">
+          <button id="btnReportLoad">Genera report</button>
+          <button id="btnReportPrint" class="secondary" type="button" disabled>Stampa / salva PDF</button>
+        </div>
+      </div>
+      <div id="reportDocument">
+        <div id="reportCompanyHeader" class="report-company-header"></div>
+        <div id="reportHeader" class="report-header empty-state">Cerca e seleziona una commessa.</div>
+        <div id="reportCards" class="grid cards"></div>
+        <div id="reportCosts"></div>
+        <h3>Consumo bordo</h3>
+        <div class="table-wrap"><table id="reportEdgesTable"></table></div>
+        <h3>Dettaglio produzione</h3>
+        <div class="table-wrap"><table id="reportProductionTable"></table></div>
+      </div>
     </div>
+    <details class="page-help"><summary>Guida Report</summary><p>Digita parte del codice commessa, del titolo o del cliente e seleziona il risultato proposto. Genera il report, quindi usa “Stampa / salva PDF” per stampare o salvare il documento in PDF con l’intestazione aziendale configurata.</p></details>
   </section>
 
   <section id="tab-clients" class="tab">
@@ -156,15 +174,26 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div><div class="toolbar"><input id="clientSearch" placeholder="Cerca cliente"><button id="btnClientSearch" class="secondary">Cerca</button></div><div class="table-wrap"><table id="clientsTable"></table></div></div>
     </div>
+    <details class="page-help"><summary>Guida Clienti</summary><p>Gestisci le anagrafiche clienti utilizzate nelle commesse. La ricerca lavora su ragione sociale, codice, partita IVA ed email.</p></details>
   </section>
 
   <section id="tab-folder" class="tab">
     <div class="page-head"><div><h2>Cartella lavori</h2><p>File rilevati dalla macchina misure tramite cartella SMB.</p></div></div>
     <div class="panel">
       <div class="row wrap"><label>Macchina<select id="folderMachine"></select></label><button id="btnScanFiles">Scansiona</button><input id="fileSearch" placeholder="Cerca file"><select id="fileAssignedFilter"><option value="0">Nuovi non associati</option><option value="1">Associati</option><option value="">Tutti</option></select><button id="btnFilesRefresh" class="secondary">Aggiorna lista</button></div>
-      <div class="row wrap"><label>Associa a commessa<select id="assignJob"></select></label><button id="btnAssignFile">Associa</button><button id="btnUnassignFile" class="secondary">Rimuovi associazione</button></div>
+      <div class="row wrap"><label>Associa a commessa<select id="assignJob"></select></label><button id="btnAssignFile">Associa</button><button id="btnUnassignFile" class="secondary">Rimuovi associazione</button><button id="btnFolderJobCreateToggle" class="secondary" type="button">Crea nuova commessa</button></div>
+      <form id="folderJobCreateForm" class="form compact inline-create" hidden>
+        <h3>Nuova commessa da cartella lavori</h3>
+        <label>Cliente *<select id="folderNewClient" required></select></label>
+        <label>Tipo lavoro *<select id="folderNewType" required></select></label>
+        <label>Codice commessa *<input id="folderNewCode" required maxlength="80"></label>
+        <label>Titolo *<input id="folderNewTitle" required maxlength="180"></label>
+        <label>Note<textarea id="folderNewNotes"></textarea></label>
+        <div class="row wrap"><button type="submit">Crea e seleziona</button><button id="btnFolderJobCreateCancel" type="button" class="secondary">Annulla</button></div>
+      </form>
       <div class="table-wrap"><table id="filesTable"></table></div>
     </div>
+    <details class="page-help"><summary>Guida Cartella lavori</summary><p>Scansiona la cartella della macchina, seleziona un file e associalo a una commessa esistente. Se la commessa non esiste, usa “Crea nuova commessa”: verrà creata per la macchina e resa subito disponibile per l’associazione.</p></details>
   </section>
 
   <section id="tab-scheduling" class="tab">
@@ -181,6 +210,7 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div><h3>Ultima esecuzione</h3><div id="schedulerLastRun" class="info-box">Nessuna esecuzione registrata.</div><h3>Installazione cron</h3><p class="muted">Esegui <code>php cli/scheduler.php</code> ogni minuto dal Task Scheduler del NAS. Lo script applica internamente l'intervallo configurato qui e usa un lock per evitare esecuzioni sovrapposte.</p></div>
     </div>
+    <details class="page-help"><summary>Guida Scheduling</summary><p>Imposta ogni quanti minuti sincronizzare le macchine e quanta storia rileggere per produzione e allarmi. Il Task Scheduler deve eseguire lo script ogni minuto; l’applicazione applica l’intervallo configurato.</p></details>
   </section>
 
   <section id="tab-costs" class="tab">
@@ -195,6 +225,37 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div class="info-box"><strong>Formula report</strong><p>Costo macchina = tempo effettivo dei pannelli × tariffa oraria. Costo bordo = consumo bordo registrato × costo/metro. Al subtotale vengono aggiunti costo fisso e maggiorazione percentuale.</p><p class="muted">I tempi anomali con uscita precedente all'ingresso vengono esclusi dal conteggio.</p></div>
     </div>
+    <details class="page-help"><summary>Guida Costi</summary><p>Configura le tariffe usate nel report economico. I valori vengono applicati ai tempi macchina e ai consumi di bordo registrati per ciascuna commessa.</p></details>
+  </section>
+
+
+  <section id="tab-company" class="tab">
+    <div class="page-head"><div><h2>Dati azienda</h2><p>Intestazione e riferimenti utilizzati nei report e nei documenti stampati.</p></div></div>
+    <div class="panel two-col">
+      <form id="companyForm" class="form">
+        <h3>Intestazione aziendale</h3>
+        <label>Ragione sociale<input name="name" maxlength="180"></label>
+        <label>Indirizzo<input name="address" maxlength="255"></label>
+        <div class="row"><label>CAP<input name="postal_code" maxlength="20"></label><label>Città<input name="city" maxlength="120"></label><label>Provincia<input name="province" maxlength="20"></label></div>
+        <label>Paese<input name="country" maxlength="80" value="Italia"></label>
+        <div class="row"><label>Partita IVA<input name="vat_number" maxlength="40"></label><label>Codice fiscale<input name="tax_code" maxlength="40"></label></div>
+        <div class="row"><label>Telefono<input name="phone" maxlength="80"></label><label>Email<input name="email" type="email" maxlength="180"></label></div>
+        <div class="row"><label>PEC<input name="pec" type="email" maxlength="180"></label><label>Codice SDI<input name="sdi" maxlength="20"></label></div>
+        <label>Sito web<input name="website" maxlength="180"></label>
+        <label>Nota piè di pagina report<textarea name="report_footer"></textarea></label>
+        <button type="submit">Salva dati azienda</button>
+      </form>
+      <div>
+        <form id="companyLogoForm" class="form compact" enctype="multipart/form-data">
+          <h3>Logo aziendale</h3>
+          <div id="companyLogoPreview" class="logo-preview">Nessun logo configurato.</div>
+          <label>Logo<input id="companyLogoFile" name="logo" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          <button type="submit">Carica logo</button>
+          <p class="muted">Formati ammessi: PNG, JPG, WebP. Dimensione massima 2 MB.</p>
+        </form>
+      </div>
+    </div>
+    <details class="page-help"><summary>Guida Dati azienda</summary><p>Inserisci i dati che devono comparire nell’intestazione dei report. Puoi caricare anche il logo aziendale; le modifiche vengono applicate ai report successivi.</p></details>
   </section>
 
   <section id="tab-settings" class="tab">
@@ -210,10 +271,11 @@ $assetVersion = static function (string $relative): string {
         <label>Note<textarea name="notes"></textarea></label><label class="check"><input name="active" type="checkbox"> Attiva</label><button type="submit">Salva macchina</button>
       </form>
     </div>
+    <details class="page-help"><summary>Guida Impostazioni macchine</summary><p>Configura indirizzo, porta, versione API e percorso delle macchine. Modifica questi parametri solo quando cambia la configurazione di rete o il tipo di integrazione.</p></details>
   </section>
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app-20260928-1305.js"></script>
+<script src="assets/app-20260928-1435.js"></script>
 </body>
 </html>
