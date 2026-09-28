@@ -5,7 +5,8 @@ const state = {
   selectedJobs: new Set(), dashboardTimer: null, refreshSeconds: 10,
 };
 const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const $ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const bind = (sel, event, handler) => { const el = $(sel); if (el) el.addEventListener(event, handler); return el; };
 
 async function api(route, options = {}) {
   const query = options.query ? '&' + new URLSearchParams(options.query).toString() : '';
@@ -44,18 +45,18 @@ function bindForms(){
   $('#costForm').addEventListener('submit',async e=>{ e.preventDefault(); try{ const d=await api('costs',{body:formToObject(e.currentTarget)}); fillForm(e.currentTarget,d); toast('Parametri costi salvati'); }catch(err){toast(err.message,'error');} });
 }
 function bindButtons(){
-  $('#btnRefresh').addEventListener('click',()=>refreshAll(true)); $('#btnLiveRefresh').addEventListener('click',()=>refreshMachineLive(true));
-  $('#btnClientReset').addEventListener('click',()=>resetForm($('#clientForm'))); $('#btnJobReset').addEventListener('click',()=>resetForm($('#jobForm')));
-  $('#btnClientSearch').addEventListener('click',loadClients); $('#clientSearch').addEventListener('keydown',e=>{if(e.key==='Enter')loadClients();});
-  $('#btnJobSearch').addEventListener('click',loadJobs); $('#jobSearch').addEventListener('keydown',e=>{if(e.key==='Enter')loadJobs();}); $('#jobStatusFilter').addEventListener('change',loadJobs);
-  $('#btnBulkOpen').addEventListener('click',()=>bulkOrder('open')); $('#btnBulkClose').addEventListener('click',()=>bulkOrder('close'));
-  $('#btnMaestroInfo').addEventListener('click',maestroInfo); $('#btnMaestroStatus').addEventListener('click',maestroStatus);
-  $('#btnOrderOpen').addEventListener('click',()=>maestroOrder('open')); $('#btnOrderActivate').addEventListener('click',()=>maestroOrder('activate')); $('#btnOrderClose').addEventListener('click',()=>maestroOrder('close'));
-  $('#btnImportProduction').addEventListener('click',importProduction); $('#btnReportLoad').addEventListener('click',loadReport);
-  $('#btnScanFiles').addEventListener('click',scanFiles); $('#btnFilesRefresh').addEventListener('click',loadFiles); $('#fileAssignedFilter').addEventListener('change',loadFiles); $('#fileSearch').addEventListener('keydown',e=>{if(e.key==='Enter')loadFiles();});
-  $('#btnAssignFile').addEventListener('click',assignFile); $('#btnUnassignFile').addEventListener('click',unassignFile); $('#btnSchedulerRun').addEventListener('click',runScheduler);
+  bind('#btnRefresh','click',()=>refreshAll(true)); bind('#btnLiveRefresh','click',()=>refreshMachineLive(true));
+  bind('#btnClientReset','click',()=>resetForm($('#clientForm'))); bind('#btnJobReset','click',()=>resetForm($('#jobForm')));
+  bind('#btnClientSearch','click',loadClients); bind('#clientSearch','keydown',e=>{if(e.key==='Enter')loadClients();});
+  bind('#btnJobSearch','click',loadJobs); bind('#jobSearch','keydown',e=>{if(e.key==='Enter')loadJobs();}); bind('#jobStatusFilter','change',loadJobs);
+  bind('#btnBulkOpen','click',()=>bulkOrder('open')); bind('#btnBulkClose','click',()=>bulkOrder('close'));
+  bind('#btnMaestroInfo','click',maestroInfo); bind('#btnMaestroStatus','click',maestroStatus);
+  bind('#btnOrderOpen','click',()=>maestroOrder('open')); bind('#btnOrderActivate','click',()=>maestroOrder('activate')); bind('#btnOrderClose','click',()=>maestroOrder('close'));
+  bind('#btnImportProduction','click',importProduction); bind('#btnReportLoad','click',loadReport);
+  bind('#btnScanFiles','click',scanFiles); bind('#btnFilesRefresh','click',loadFiles); bind('#fileAssignedFilter','change',loadFiles); bind('#fileSearch','keydown',e=>{if(e.key==='Enter')loadFiles();});
+  bind('#btnAssignFile','click',assignFile); bind('#btnUnassignFile','click',unassignFile); bind('#btnSchedulerRun','click',runScheduler);
 }
-function setDefaultDateTimes(){ const now=new Date(), start=new Date(now.getTime()-24*3600*1000); $('#prodFrom').value=toLocalInput(start); $('#prodTo').value=toLocalInput(now); }
+function setDefaultDateTimes(){ const now=new Date(), start=new Date(now.getTime()-24*3600*1000); const from=$('#prodFrom'), to=$('#prodTo'); if(from)from.value=toLocalInput(start); if(to)to.value=toLocalInput(now); }
 function toLocalInput(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
 async function loadBaseData(){ await Promise.all([loadClients(),loadJobTypes(),loadMachines()]); }
 async function refreshAll(showToast=false){ try{ await loadBaseData(); await Promise.all([loadDashboard(),loadJobs(),loadFiles(),loadProduction(),loadScheduling(),loadCosts()]); $('#lastRefresh').textContent='Aggiornato '+new Date().toLocaleTimeString('it-IT'); if(showToast)toast('Dati aggiornati'); }catch(e){toast(e.message,'error');} }
