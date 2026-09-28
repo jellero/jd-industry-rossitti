@@ -1,0 +1,5 @@
+app/config.local.php
+public/uploads/misurazioni/*
+!public/uploads/misurazioni/.gitkeep
+*.log
+.DS_Store
