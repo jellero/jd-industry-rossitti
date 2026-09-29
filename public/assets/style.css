@@ -34,8 +34,14 @@ button{border:0;background:var(--primary);color:#fff;border-radius:8px;padding:1
 .logo-preview img{max-width:280px;max-height:120px;object-fit:contain}
 .inline-create{margin:14px 0 18px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#f9fafb}
 .page-help{margin:18px 0 4px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 14px}
-.page-help summary{padding:12px 0;color:#344054}
-.page-help p{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.55}
+.page-help summary{padding:13px 0;color:#344054;font-size:13px}
+.page-help[open]{padding-bottom:14px}
+.page-help .help-content{border-top:1px solid var(--line);padding-top:13px;color:#475467;font-size:13px;line-height:1.6}
+.page-help p{margin:0 0 12px;color:#475467;font-size:13px;line-height:1.6}
+.page-help ol{margin:0 0 12px;padding-left:22px}
+.page-help li{margin:0 0 8px;padding-left:3px}
+.page-help li:last-child{margin-bottom:0}
+.page-help .help-note{margin-top:13px;padding:10px 12px;border-radius:8px;background:var(--primary-soft);color:#344054}
 
 @media print{
   @page{size:A4;margin:14mm}
