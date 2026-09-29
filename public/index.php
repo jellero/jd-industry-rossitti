@@ -11,7 +11,7 @@ $assetVersion = static function (string $relative): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="app-build" content="20260929-1305">
+  <meta name="app-build" content="20260929-1315">
   <title>Gestione Commesse e Produzione</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
@@ -64,8 +64,7 @@ $assetVersion = static function (string $relative): string {
       <div class="row wrap">
         <strong>Azioni multiple</strong>
         <label>Bordatrice<select id="bulkMachine"></select></label>
-        <button id="btnBulkOpen">Apri selezionate su macchina</button>
-        <button id="btnBulkActivate">Attiva selezionata</button>
+        <button id="btnBulkOpen">Carica selezionate su macchina</button>
         <button id="btnBulkClose" class="danger">Chiudi selezionate</button>
         <span id="bulkCount" class="muted">0 selezionate</span>
       </div>
@@ -104,7 +103,7 @@ $assetVersion = static function (string $relative): string {
         <div class="table-wrap"><table id="jobsTable"></table></div>
       </div>
     </div>
-    <details class="page-help"><summary>Guida Commesse</summary><p>Crea e modifica le commesse, cerca il cliente per ragione sociale, codice, P. IVA o email, filtra l’elenco e seleziona più commesse per inviarle alla bordatrice. Il pulsante Report apre direttamente il report della commessa.</p></details>
+    <details class="page-help"><summary>Guida Commesse</summary><p>Crea e modifica le commesse, cerca il cliente per ragione sociale, codice, P. IVA o email e filtra l’elenco. “Carica selezionate su macchina” può inviare più commesse alla bordatrice; “Attiva lavorazione” è invece disponibile sulla singola commessa e la rende quella corrente sulla macchina.</p></details>
   </section>
 
   <section id="tab-maestro" class="tab">
@@ -115,8 +114,8 @@ $assetVersion = static function (string $relative): string {
         <label>Commessa<select id="maestroJob"></select></label>
         <button id="btnMaestroStatus">Leggi stato</button>
         <button id="btnMaestroInfo" class="secondary">Info macchina</button>
-        <button id="btnOrderOpen">Apri</button>
-        <button id="btnOrderActivate">Attiva</button>
+        <button id="btnOrderOpen">Carica su macchina</button>
+        <button id="btnOrderActivate">Attiva lavorazione</button>
         <button id="btnOrderClose" class="danger">Chiudi</button>
       </div>
       <div id="maestroHumanStatus" class="status-summary"></div>
@@ -133,7 +132,7 @@ $assetVersion = static function (string $relative): string {
       </div>
       <div class="table-wrap"><table id="productionTable"></table></div>
     </div>
-    <details class="page-help"><summary>Guida Bordatrice</summary><p>Usa questa pagina per comandi manuali, verifica dello stato e recuperi storici. L’importazione con una commessa selezionata filtra i dati: non forza più associazioni incompatibili.</p></details>
+    <details class="page-help"><summary>Guida Bordatrice</summary><p>“Carica su macchina” aggiunge la commessa alle commesse attive della bordatrice; “Attiva lavorazione” la rende la commessa corrente. Usa questa pagina anche per verifica dello stato e recuperi storici.</p></details>
   </section>
 
   <section id="tab-reports" class="tab">
@@ -283,6 +282,6 @@ $assetVersion = static function (string $relative): string {
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app-20260928-1445.js?v=0929-1305"></script>
+<script src="assets/app-20260928-1445.js?v=0929-1315"></script>
 </body>
 </html>
