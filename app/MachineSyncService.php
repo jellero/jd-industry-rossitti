@@ -191,9 +191,11 @@ final class MachineSyncService
 
     private function findJobByCode(?string $code, int $machineId): ?int
     {
-        if ($code === null || trim($code) === '') return null;
+        if ($code === null) return null;
+        $code = trim($code);
+        if ($code === '' || $code === '-') return null;
         $stmt = $this->pdo->prepare('SELECT id FROM jobs WHERE job_code=? AND (machine_id=? OR machine_id IS NULL) ORDER BY CASE WHEN machine_id=? THEN 0 ELSE 1 END LIMIT 1');
-        $stmt->execute([trim($code), $machineId, $machineId]);
+        $stmt->execute([$code, $machineId, $machineId]);
         $id = $stmt->fetchColumn();
         return $id ? (int)$id : null;
     }
