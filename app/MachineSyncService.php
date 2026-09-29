@@ -253,7 +253,12 @@ final class MachineSyncService
         if ($code === null) return null;
         $code = trim($code);
         if ($code === '' || $code === '-') return null;
-        $stmt = $this->pdo->prepare('SELECT id FROM jobs WHERE job_code=? AND (machine_id=? OR machine_id IS NULL) ORDER BY CASE WHEN machine_id=? THEN 0 ELSE 1 END LIMIT 1');
+        $stmt = $this->pdo->prepare("SELECT j.id
+            FROM jobs j
+            JOIN job_types jt ON jt.id=j.job_type_id
+            WHERE j.job_code=? AND jt.source_type='MAESTRO_REST' AND (j.machine_id=? OR j.machine_id IS NULL)
+            ORDER BY CASE WHEN j.machine_id=? THEN 0 ELSE 1 END
+            LIMIT 1");
         $stmt->execute([$code, $machineId, $machineId]);
         $id = $stmt->fetchColumn();
         return $id ? (int)$id : null;
