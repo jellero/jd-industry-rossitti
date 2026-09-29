@@ -456,5 +456,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('Gestionale UI build 20260929-1350');
+console.info('Gestionale UI build 20260929-1400');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
