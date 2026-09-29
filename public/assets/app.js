@@ -2,7 +2,7 @@
 
 const state = {
   clients: [], clientOptions: [], jobTypes: [], machines: [], jobs: [], jobOptions: [], files: [], selectedFileId: null,
-  selectedJobs: new Set(), dashboardTimer: null, refreshSeconds: 10,
+  selectedJobs: new Set(), dashboardTimer: null, dashboardRefreshing: false, refreshSeconds: 10,
   company: {}, scheduling: null, reportSearchTimer: null, reportJobId: null,
 };
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -45,7 +45,7 @@ function renderTable(table,cols,rows,actions=null){ if(!table)return; const head
 function badge(status){ return `<span class="badge ${esc(status)}">${esc(String(status||'').replaceAll('_',' '))}</span>`; }
 
 async function bootstrap(){ bindTabs(); bindForms(); bindButtons(); setDefaultDateTimes(); await loadBaseData(); await Promise.all([loadDashboard(),loadJobs(),loadFiles(),loadProduction(),loadScheduling(),loadCosts(),loadCompanySettings()]); scheduleDashboardPolling(); }
-function bindTabs(){ all('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{ all('.tabs button').forEach(b=>b.classList.remove('active')); all('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); const tab=$('#tab-'+btn.dataset.tab); if(tab)tab.classList.add('active'); })); }
+function bindTabs(){ all('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{ all('.tabs button').forEach(b=>b.classList.remove('active')); all('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); const tab=$('#tab-'+btn.dataset.tab); if(tab)tab.classList.add('active'); if(btn.dataset.tab==='dashboard')refreshMachineLive(false); })); }
 function bindForms(){
   bind('#clientForm','submit',async e=>{ e.preventDefault(); try{ await api('clients',{body:formToObject(e.currentTarget)}); resetForm(e.currentTarget); await loadClients(); await loadJobs(); toast('Cliente salvato'); }catch(err){toast(err.message,'error');} });
   bind('#jobForm','submit',async e=>{ e.preventDefault(); if(!$('#jobClientSelect')?.value)return toast('Cerca e seleziona un cliente','error'); try{ await api('jobs',{body:formToObject(e.currentTarget)}); resetJobForm(); await loadJobs(); await loadDashboard(); toast('Commessa salvata'); }catch(err){toast(err.message,'error');} });
@@ -81,8 +81,39 @@ async function refreshAll(showToast=false){ try{ await loadBaseData(); await Pro
 
 async function loadDashboard(){ const d=await api('dashboard'); state.refreshSeconds=Number(d.refresh_seconds||10); const cards=[['Commesse aperte',d.jobs_open],['In lavorazione',d.jobs_running],['Commesse chiuse',d.jobs_closed],['Pannelli registrati',d.production_rows],['File da associare',d.files_new]]; $('#dashboardCards').innerHTML=cards.map(([l,v])=>`<div class="card metric"><span>${esc(l)}</span><strong>${esc(v)}</strong></div>`).join(''); if(state.scheduling)updateSchedulerDashboardCard(state.scheduling); renderMachineCards(d.machines||[]); renderTable($('#dashboardJobsTable'),[{label:'Commessa',render:r=>`<strong>${esc(r.job_code)}</strong><div class="muted small">${esc(r.title)}</div>`},{label:'Cliente',key:'company_name'},{label:'Macchina',key:'machine_name'},{label:'Stato',render:r=>badge(r.status)},{label:'Aggiornata',render:r=>fmtDateTime(r.updated_at||r.created_at)}],d.recent_jobs||[],r=>`<button type="button" data-open-report="${r.id}" class="secondary">Report</button>`); $('#lastRefresh').textContent='Aggiornato '+new Date().toLocaleTimeString('it-IT'); }
 function renderMachineCards(rows){ $('#machineCards').innerHTML=rows.map(m=>{ if(m.kind!=='maestro_rest') return `<div class="machine-card neutral"><div class="machine-title"><span class="status-dot neutral"></span><strong>${esc(m.name)}</strong></div><p>Macchina cartella / file</p></div>`; const online=Number(m.online)===1; const hasAlarm=Number(m.alarms)===1; const hasWarning=Number(m.warnings)===1; const isWorking=Number(m.working)===1; const cls=!online?'offline':(hasAlarm?'alarm':isWorking?'working':hasWarning?'warning':'ready'); const rawState=String(m.machine_state||'').trim(); const key=rawState.toUpperCase(); const labels={'FAIL':'Allarme','ALARM':'Allarme','ALLARME':'Allarme','WORK':'In lavorazione','WORKING':'In lavorazione','EXE':'In lavorazione','IN_LAVORAZIONE':'In lavorazione','IN LAVORAZIONE':'In lavorazione','READY':'Pronta','PRONTA':'Pronta','WARNING':'Attenzione','ATTENZIONE':'Attenzione','SETUP':'Preparazione','PREPARAZIONE':'Preparazione','POWER OFF':'Spenta','POWEROFF':'Spenta','SPENTA':'Spenta'}; const derived=hasAlarm?'Allarme':isWorking?'In lavorazione':hasWarning?'Attenzione':'Pronta'; const stateLabel=!online?'Non raggiungibile':(labels[key]||rawState||derived); return `<div class="machine-card ${cls}"><div class="machine-title"><span class="status-dot ${cls}"></span><div><strong>${esc(m.name)}</strong><div class="machine-state">${esc(stateLabel)}</div></div></div><div class="machine-kpis"><div><span>Commessa</span><b>${esc((m.current_order&&m.current_order!=='-')?m.current_order:'—')}</b></div><div><span>Velocità</span><b>${m.track_speed!==null&&m.track_speed!==''?esc(m.track_speed)+' m/min':'—'}</b></div><div><span>Pezzi in macchina</span><b>${m.pieces_in_machine??'—'}</b></div><div><span>Ultima chiusa</span><b>${esc((m.last_order_closed&&m.last_order_closed!=='-')?m.last_order_closed:'—')}</b></div></div><div class="machine-footer">${m.last_error?`<span class="error-text">${esc(m.last_error)}</span>`:`Ultimo dato: ${esc(fmtDateTime(m.last_success_at||m.last_checked_at)||'mai')}`}</div></div>`; }).join('')||'<div class="empty-state">Nessuna macchina attiva.</div>'; }
-async function refreshMachineLive(showToast=false){ try{ const result=await api('machines/live'); await Promise.all([loadDashboard(),loadJobs()]); if(showToast){ const failed=Object.values(result||{}).filter(x=>!x?.success); if(!failed.length)toast('Stato macchine aggiornato'); else { const reachable=failed.filter(x=>x?.reachable).length; const offline=failed.length-reachable; const parts=[]; if(offline)parts.push(offline+' non raggiungibile'); if(reachable)parts.push(reachable+' con errore gestionale'); toast('Aggiornamento completato: '+parts.join(', '),'error'); } } }catch(e){ if(showToast)toast(e.message,'error'); } }
-function scheduleDashboardPolling(){ clearInterval(state.dashboardTimer); const sec=Math.max(5,Number(state.refreshSeconds||10)); state.dashboardTimer=setInterval(async()=>{ const tab=$('#tab-dashboard'); if(document.visibilityState==='visible' && tab?.classList.contains('active')) await refreshMachineLive(false); },sec*1000); }
+async function refreshMachineLive(showToast=false){
+  if(state.dashboardRefreshing)return;
+  state.dashboardRefreshing=true;
+  try{
+    const result=await api('machines/live');
+    await loadScheduling();
+    await Promise.all([loadDashboard(),loadJobs()]);
+    if(showToast){
+      const failed=Object.values(result||{}).filter(x=>!x?.success);
+      if(!failed.length)toast('Stato macchine e scheduler aggiornati');
+      else{
+        const reachable=failed.filter(x=>x?.reachable).length;
+        const offline=failed.length-reachable;
+        const parts=[];
+        if(offline)parts.push(offline+' non raggiungibile');
+        if(reachable)parts.push(reachable+' con errore gestionale');
+        toast('Aggiornamento completato: '+parts.join(', '),'error');
+      }
+    }
+  }catch(e){
+    if(showToast)toast(e.message,'error');
+  }finally{
+    state.dashboardRefreshing=false;
+  }
+}
+function scheduleDashboardPolling(){
+  clearInterval(state.dashboardTimer);
+  const sec=Math.max(5,Number(state.refreshSeconds||10));
+  const tick=async()=>{ const tab=$('#tab-dashboard'); if(document.visibilityState==='visible' && tab?.classList.contains('active')) await refreshMachineLive(false); };
+  state.dashboardTimer=setInterval(tick,sec*1000);
+  const tab=$('#tab-dashboard');
+  if(document.visibilityState==='visible' && tab?.classList.contains('active'))tick();
+}
 
 async function loadClients(){ const q=$('#clientSearch')?.value||''; const requests=[api('clients',{query:{q:q}})]; if(q.trim())requests.push(api('clients')); const result=await Promise.all(requests); state.clients=result[0]; state.clientOptions=result[1]||result[0]; renderTable($('#clientsTable'),[{label:'Codice',key:'code'},{label:'Ragione sociale',key:'company_name'},{label:'Email',key:'email'},{label:'Telefono',key:'phone'},{label:'Attivo',render:r=>Number(r.active)?'Sì':'No'}],state.clients,r=>`<button type="button" data-client-jobs="${r.id}" class="secondary">Commesse</button><button data-edit-client="${r.id}" class="secondary">Modifica</button><button data-del-client="${r.id}" class="danger">Elimina</button>`); all('[data-edit-client]').forEach(b=>b.addEventListener('click',()=>fillForm($('#clientForm'),state.clients.find(x=>x.id==b.dataset.editClient)))); all('[data-del-client]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Eliminare il cliente?'))return; try{await api('clients',{method:'DELETE',query:{id:b.dataset.delClient}}); await loadClients(); toast('Cliente eliminato');}catch(e){toast(e.message,'error');}})); updateSelects(); }
 async function loadJobTypes(){ state.jobTypes=await api('job-types'); updateSelects(); }
@@ -288,5 +319,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('Gestionale UI build 20260929-1100');
+console.info('Gestionale UI build 20260929-1140');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
