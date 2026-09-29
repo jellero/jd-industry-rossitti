@@ -713,6 +713,7 @@ function scheduler_run_manual(): void
         $sync = new MachineSyncService();
         $details = [];
         $ok = 0;
+        $hardErrors = 0;
         foreach ($machines as $machine) {
             try {
                 $res = $sync->syncFull(
@@ -722,13 +723,20 @@ function scheduler_run_manual(): void
                     Settings::getInt('scheduler.page_limit',100)
                 );
                 $details[$machine['name']] = $res;
-                if (!empty($res['success'])) $ok++;
+                if (!empty($res['success'])) {
+                    $ok++;
+                } elseif (!empty($res['reachable'])) {
+                    // La macchina ha risposto: questo e' un vero errore di sincronizzazione/applicazione.
+                    $hardErrors++;
+                }
+                // Macchina spenta/non raggiungibile: non e' un errore dello scheduler.
             } catch (Throwable $e) {
-                $details[$machine['name']] = ['success'=>false,'error'=>$e->getMessage()];
+                $details[$machine['name']] = ['success'=>false,'reachable'=>true,'error'=>$e->getMessage()];
+                $hardErrors++;
             }
         }
 
-        $success = count($machines) === 0 || $ok === count($machines);
+        $success = $hardErrors === 0;
         $pdo->prepare('UPDATE scheduler_runs SET finished_at=NOW(),success=?,machines_total=?,machines_ok=?,details_json=? WHERE id=?')
             ->execute([(int)$success,count($machines),$ok,json_encode($details,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$runId]);
 
