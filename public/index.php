@@ -55,7 +55,19 @@ $assetVersion = static function (string $relative): string {
       <div class="panel-head"><div><h3>Commesse recenti</h3><p class="muted">Ordinate dalla più recente alla meno recente.</p></div></div>
       <div class="table-wrap"><table id="dashboardJobsTable"></table></div>
     </div>
-    <details class="page-help"><summary>Guida Dashboard</summary><p>Controlla lo stato delle macchine, le commesse più recenti e gli indicatori principali. Dalla lista delle commesse recenti puoi aprire direttamente il relativo report. Usa “Aggiorna macchine” per forzare una lettura immediata delle macchine connesse.</p></details>
+    <details class="page-help">
+      <summary>Guida Dashboard — cosa controllare</summary>
+      <div class="help-content">
+        <p>La Dashboard è il punto di controllo rapido del gestionale.</p>
+        <ol>
+          <li><strong>Indicatori:</strong> verifica quante commesse sono aperte, in lavorazione o chiuse, quanti pannelli sono stati registrati e quanti file devono ancora essere associati.</li>
+          <li><strong>Scheduler:</strong> deve risultare attivo e l’orario dell’ultimo automatico deve avanzare secondo l’intervallo configurato.</li>
+          <li><strong>Macchine:</strong> controlla lo stato della Bordatrice, l’eventuale motivo di allarme, la commessa corrente, velocità e pezzi presenti.</li>
+          <li><strong>Aggiorna macchine:</strong> forza subito una lettura della Bordatrice senza attendere il prossimo aggiornamento automatico.</li>
+          <li><strong>Commesse recenti:</strong> usa <em>Report</em> per aprire direttamente il report della commessa interessata.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
   <section id="tab-jobs" class="tab">
@@ -103,7 +115,23 @@ $assetVersion = static function (string $relative): string {
         <div class="table-wrap"><table id="jobsTable"></table></div>
       </div>
     </div>
-    <details class="page-help"><summary>Guida Commesse</summary><p>Crea e modifica le commesse, cerca il cliente per ragione sociale, codice, P. IVA o email e filtra l’elenco. “Carica selezionate su macchina” può inviare più commesse alla bordatrice; “Attiva lavorazione” è invece disponibile sulla singola commessa e la rende quella corrente sulla macchina.</p></details>
+    <details class="page-help">
+      <summary>Guida Commesse — creazione, caricamento e avvio lavorazione</summary>
+      <div class="help-content">
+        <p>Questa pagina gestisce l’intero ciclo della commessa, dalla creazione fino alla lavorazione sulla Bordatrice.</p>
+        <ol>
+          <li><strong>Crea la commessa:</strong> nel riquadro <em>Nuova / modifica commessa</em> cerca e seleziona il cliente, scegli il tipo di lavorazione, indica la macchina se già nota, inserisci codice commessa e titolo. Compila eventualmente descrizione, date e note, quindi premi <em>Salva commessa</em>.</li>
+          <li><strong>Cerca il cliente:</strong> puoi digitare ragione sociale, codice, P. IVA, codice fiscale, email, telefono o città; poi seleziona il cliente corretto dalla tendina.</li>
+          <li><strong>Carica sulla Bordatrice:</strong> spunta una o più commesse Maestro, scegli la Bordatrice nelle <em>Azioni multiple</em> e premi <em>Carica selezionate su macchina</em>. Questa operazione rende le commesse disponibili sulla macchina, ma non avvia ancora la lavorazione.</li>
+          <li><strong>Attiva una lavorazione:</strong> sulla singola riga della commessa già caricata premi <em>Attiva lavorazione</em>. Solo una commessa alla volta può essere la commessa corrente della Bordatrice.</li>
+          <li><strong>Durante la produzione:</strong> quando la macchina restituisce la commessa come attiva, il gestionale la aggiorna automaticamente a <em>in lavorazione</em>.</li>
+          <li><strong>Chiudi:</strong> usa <em>Chiudi selezionate</em> per inviare alla Bordatrice il comando di chiusura delle commesse selezionate. Una chiusura accettata dalla macchina porta la commessa locale a <em>chiusa</em>.</li>
+          <li><strong>Report:</strong> il pulsante <em>Report</em> apre direttamente produzione, tempi, consumi e costi della commessa.</li>
+          <li><strong>Modifica:</strong> usa <em>Modifica</em> per richiamare i dati della commessa nel modulo; usa <em>Nuova</em> per pulire il modulo e crearne un’altra.</li>
+        </ol>
+        <p class="help-note"><strong>Sequenza consigliata per la Bordatrice:</strong> crea commessa → salva → carica su macchina → attiva lavorazione → produci → chiudi.</p>
+      </div>
+    </details>
   </section>
 
   <section id="tab-maestro" class="tab">
@@ -132,7 +160,22 @@ $assetVersion = static function (string $relative): string {
       </div>
       <div class="table-wrap"><table id="productionTable"></table></div>
     </div>
-    <details class="page-help"><summary>Guida Bordatrice</summary><p>“Carica su macchina” aggiunge la commessa alle commesse attive della bordatrice; “Attiva lavorazione” la rende la commessa corrente. Usa questa pagina anche per verifica dello stato e recuperi storici.</p></details>
+    <details class="page-help">
+      <summary>Guida Bordatrice — comandi e stato macchina</summary>
+      <div class="help-content">
+        <p>Usa questa pagina per comandare direttamente la Bordatrice e verificare ciò che la macchina sta realmente comunicando.</p>
+        <ol>
+          <li><strong>Seleziona la macchina</strong> e poi la commessa Maestro interessata.</li>
+          <li><strong>Carica su macchina:</strong> aggiunge la commessa all’elenco delle commesse disponibili sulla Bordatrice. Non la rende ancora quella corrente.</li>
+          <li><strong>Attiva lavorazione:</strong> imposta la commessa selezionata come commessa corrente. Da quel momento la produzione viene attribuita a quella commessa.</li>
+          <li><strong>Chiudi:</strong> termina la commessa sulla macchina. La chiusura è un’operazione definitiva lato Maestro.</li>
+          <li><strong>Leggi stato:</strong> aggiorna stato macchina, commessa corrente, velocità, pezzi e allarmi. Se è presente un allarme viene mostrato anche codice e descrizione del motivo.</li>
+          <li><strong>Info macchina:</strong> legge modello e informazioni tecniche esposte dall’API.</li>
+          <li><strong>Import produzione manuale:</strong> indica intervallo <em>Da/A</em> e usa <em>Importa</em> solo per recuperi storici o verifiche; normalmente la produzione viene acquisita dallo scheduler.</li>
+        </ol>
+        <p class="help-note"><strong>Importante:</strong> <em>Carica</em> e <em>Attiva</em> non sono la stessa cosa. Prima si rende disponibile la commessa sulla macchina, poi si sceglie quale deve essere quella corrente.</p>
+      </div>
+    </details>
   </section>
 
   <section id="tab-reports" class="tab">
@@ -160,7 +203,18 @@ $assetVersion = static function (string $relative): string {
         <div class="table-wrap"><table id="reportProductionTable"></table></div>
       </div>
     </div>
-    <details class="page-help"><summary>Guida Report</summary><p>Digita parte del codice commessa, del titolo o del cliente e seleziona il risultato proposto. Genera il report, quindi usa “Stampa / salva PDF” per stampare o salvare il documento in PDF con l’intestazione aziendale configurata.</p></details>
+    <details class="page-help">
+      <summary>Guida Report — ricerca, controllo e stampa</summary>
+      <div class="help-content">
+        <ol>
+          <li>Digita parte del <strong>codice commessa</strong>, del titolo o del cliente.</li>
+          <li>Seleziona la commessa proposta dall’elenco.</li>
+          <li>Premi <em>Genera report</em> per visualizzare pannelli prodotti, tempo macchina, consumo bordo e costi.</li>
+          <li>Controlla il dettaglio produzione e i consumi prima della stampa.</li>
+          <li>Premi <em>Stampa / salva PDF</em> e usa la funzione PDF del browser per creare il documento con intestazione aziendale.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
   <section id="tab-clients" class="tab">
@@ -178,7 +232,18 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div><div class="toolbar"><input id="clientSearch" placeholder="Cerca cliente"><button id="btnClientSearch" class="secondary">Cerca</button></div><div class="table-wrap"><table id="clientsTable"></table></div></div>
     </div>
-    <details class="page-help"><summary>Guida Clienti</summary><p>Gestisci le anagrafiche clienti utilizzate nelle commesse. La ricerca lavora su ragione sociale, codice, partita IVA ed email.</p></details>
+    <details class="page-help">
+      <summary>Guida Clienti — anagrafica e commesse collegate</summary>
+      <div class="help-content">
+        <ol>
+          <li>Inserisci almeno la <strong>ragione sociale</strong>; completa codice, P. IVA, codice fiscale, contatti e indirizzo quando disponibili.</li>
+          <li>Premi <em>Salva cliente</em> per creare o aggiornare l’anagrafica.</li>
+          <li>Usa la ricerca per trovare rapidamente un cliente per ragione sociale, codice, P. IVA o email.</li>
+          <li>Premi <em>Commesse</em> per passare alla pagina Commesse già filtrata sul cliente selezionato.</li>
+          <li>Se un cliente non deve più essere usato, puoi disattivarlo togliendo <em>Attivo</em>. L’eliminazione è bloccata quando esistono commesse collegate.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
   <section id="tab-folder" class="tab">
@@ -199,7 +264,19 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div class="table-wrap"><table id="filesTable"></table></div>
     </div>
-    <details class="page-help"><summary>Guida Cartella lavori</summary><p>Scansiona la cartella della macchina, seleziona un file e associalo a una commessa esistente. Le commesse già associate aprono direttamente il relativo report. Se la commessa non esiste, usa “Crea nuova commessa”: puoi cercare il cliente e creare subito la commessa per la macchina.</p></details>
+    <details class="page-help">
+      <summary>Guida Cartella lavori — scansione e associazione file</summary>
+      <div class="help-content">
+        <ol>
+          <li>Seleziona la macchina cartella e premi <em>Scansiona</em> per rilevare i file disponibili.</li>
+          <li>Seleziona un file dalla lista.</li>
+          <li>Scegli una commessa compatibile in <em>Associa a commessa</em> e premi <em>Associa</em>.</li>
+          <li>Se la commessa non esiste, premi <em>Crea nuova commessa</em>, cerca il cliente, scegli il tipo lavoro, inserisci codice e titolo, quindi crea la commessa.</li>
+          <li>Per correggere un’associazione usa <em>Rimuovi associazione</em> e poi associa nuovamente il file.</li>
+          <li>Quando un file è già associato, clicca sulla commessa visualizzata per aprirne direttamente il report.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
   <section id="tab-scheduling" class="tab">
@@ -216,7 +293,19 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div><h3>Ultima esecuzione</h3><div id="schedulerLastRun" class="info-box">Nessuna esecuzione registrata.</div><h3>Installazione cron</h3><p class="muted">Esegui <code>php cli/scheduler.php</code> ogni minuto dal Task Scheduler del NAS. Lo script applica internamente l'intervallo configurato qui e usa un lock per evitare esecuzioni sovrapposte.</p></div>
     </div>
-    <details class="page-help"><summary>Guida Scheduling</summary><p>Imposta ogni quanti minuti sincronizzare le macchine e quanta storia rileggere per produzione e allarmi. Il Task Scheduler deve eseguire lo script ogni minuto; l’applicazione applica l’intervallo configurato.</p></details>
+    <details class="page-help">
+      <summary>Guida Scheduling — sincronizzazione automatica</summary>
+      <div class="help-content">
+        <ol>
+          <li>Lascia <strong>Scheduler attivo</strong> per consentire le sincronizzazioni automatiche.</li>
+          <li>Imposta l’intervallo di sincronizzazione, ad esempio 1 minuto per un controllo frequente.</li>
+          <li>Configura le finestre di rilettura produzione e allarmi: servono a recuperare eventuali dati arrivati in ritardo.</li>
+          <li>Il Task Scheduler del NAS deve eseguire <code>cli/scheduler.php</code> ogni minuto; lo script decide internamente se è già trascorso l’intervallo configurato.</li>
+          <li>Usa <em>Esegui sincronizzazione ora</em> solo quando vuoi forzare un ciclo immediato.</li>
+          <li>Controlla <em>Ultima esecuzione</em>: deve mostrare orario, tipo di esecuzione e numero di macchine sincronizzate.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
   <section id="tab-costs" class="tab">
@@ -231,7 +320,18 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div class="info-box"><strong>Formula report</strong><p>Costo macchina = tempo effettivo dei pannelli × tariffa oraria. Costo bordo = consumo bordo registrato × costo/metro. Al subtotale vengono aggiunti costo fisso e maggiorazione percentuale.</p><p class="muted">I tempi anomali con uscita precedente all'ingresso vengono esclusi dal conteggio.</p></div>
     </div>
-    <details class="page-help"><summary>Guida Costi</summary><p>Configura le tariffe usate nel report economico. I valori vengono applicati ai tempi macchina e ai consumi di bordo registrati per ciascuna commessa.</p></details>
+    <details class="page-help">
+      <summary>Guida Costi — parametri usati nei report</summary>
+      <div class="help-content">
+        <ol>
+          <li>Inserisci il costo macchina orario.</li>
+          <li>Inserisci il costo del bordo per metro.</li>
+          <li>Imposta un eventuale costo fisso per commessa.</li>
+          <li>Inserisci la percentuale di maggiorazione/costi generali.</li>
+          <li>Premi <em>Salva costi</em>. I nuovi valori verranno usati nei report economici delle commesse.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
 
@@ -261,7 +361,17 @@ $assetVersion = static function (string $relative): string {
         </form>
       </div>
     </div>
-    <details class="page-help"><summary>Guida Dati azienda</summary><p>Inserisci i dati che devono comparire nell’intestazione dei report. Puoi caricare anche il logo aziendale; le modifiche vengono applicate ai report successivi.</p></details>
+    <details class="page-help">
+      <summary>Guida Dati azienda — intestazione dei report</summary>
+      <div class="help-content">
+        <ol>
+          <li>Inserisci ragione sociale, indirizzo e dati fiscali dell’azienda.</li>
+          <li>Completa telefono, email, PEC, SDI e sito web se devono comparire nei documenti.</li>
+          <li>Usa la nota piè di pagina per eventuali informazioni fisse da riportare nei report.</li>
+          <li>Premi <em>Salva dati azienda</em>. Le modifiche saranno usate nei report generati successivamente.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 
   <section id="tab-settings" class="tab">
@@ -277,7 +387,18 @@ $assetVersion = static function (string $relative): string {
         <label>Note<textarea name="notes"></textarea></label><label class="check"><input name="active" type="checkbox"> Attiva</label><button type="submit">Salva macchina</button>
       </form>
     </div>
-    <details class="page-help"><summary>Guida Impostazioni macchine</summary><p>Configura indirizzo, porta, versione API e percorso delle macchine. Modifica questi parametri solo quando cambia la configurazione di rete o il tipo di integrazione.</p></details>
+    <details class="page-help">
+      <summary>Guida Impostazioni macchine — configurazione tecnica</summary>
+      <div class="help-content">
+        <ol>
+          <li>Seleziona <em>Modifica</em> sulla macchina interessata.</li>
+          <li>Per una macchina Maestro verifica versione API, indirizzo IP/host, porta e base path.</li>
+          <li>Per una macchina a cartella verifica il percorso di upload configurato.</li>
+          <li>Usa <em>Attiva</em> per includere la macchina nelle funzioni del gestionale.</li>
+          <li>Premi <em>Salva macchina</em> solo dopo aver verificato i parametri: valori errati possono impedire la comunicazione con la macchina.</li>
+        </ol>
+      </div>
+    </details>
   </section>
 </main>
 
