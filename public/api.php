@@ -206,7 +206,16 @@ function clients_save(): void
 function clients_delete(): void
 {
     $id = require_id($_GET['id'] ?? null);
-    Db::pdo()->prepare('DELETE FROM clients WHERE id=?')->execute([$id]);
+    $pdo = Db::pdo();
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM jobs WHERE client_id=?');
+    $stmt->execute([$id]);
+    $jobs = (int)$stmt->fetchColumn();
+    if ($jobs > 0) {
+        ApiResponse::error('Cliente collegato a ' . $jobs . ' commesse: disattivalo invece di eliminarlo', 409);
+    }
+    $stmt = $pdo->prepare('DELETE FROM clients WHERE id=?');
+    $stmt->execute([$id]);
+    if ($stmt->rowCount() === 0) ApiResponse::error('Cliente non trovato', 404);
     ApiResponse::ok();
 }
 
