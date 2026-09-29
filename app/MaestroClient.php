@@ -62,8 +62,16 @@ final class MaestroClient
     {
         $row = is_array($response['data'] ?? null) ? $response['data'] : [];
         if ($this->version() === 'v1') {
+            $stateCode = !empty($row['Alarms']) ? 'ALARM' : (!empty($row['Work']) ? 'WORK' : (!empty($row['Warnings']) ? 'WARNING' : 'READY'));
+            $stateLabel = [
+                'ALARM' => 'Allarme',
+                'WORK' => 'In lavorazione',
+                'WARNING' => 'Attenzione',
+                'READY' => 'Pronta',
+            ][$stateCode];
             return [
-                'machine_state' => !empty($row['Alarms']) ? 'FAIL' : (!empty($row['Work']) ? 'WORK' : 'READY'),
+                'machine_state' => $stateLabel,
+                'machine_state_code' => $stateCode,
                 'working' => (bool)($row['Work'] ?? false),
                 'alarms' => (bool)($row['Alarms'] ?? false),
                 'warnings' => (bool)($row['Warnings'] ?? false),
@@ -80,8 +88,21 @@ final class MaestroClient
             ];
         }
 
+        $stateCode = strtoupper(trim((string)($row['status'] ?? '')));
+        $stateLabels = [
+            'EXE' => 'In lavorazione',
+            'WORK' => 'In lavorazione',
+            'READY' => 'Pronta',
+            'SETUP' => 'Preparazione',
+            'FAIL' => 'Allarme',
+            'POWER OFF' => 'Spenta',
+            'POWEROFF' => 'Spenta',
+        ];
+        $stateLabel = $stateCode !== '' ? ($stateLabels[$stateCode] ?? $stateCode) : null;
+
         return [
-            'machine_state' => str_or_null($row['status'] ?? null),
+            'machine_state' => $stateLabel,
+            'machine_state_code' => $stateCode !== '' ? $stateCode : null,
             'working' => (bool)($row['working'] ?? false),
             'alarms' => (bool)($row['alarm'] ?? false),
             'warnings' => (bool)($row['warning'] ?? false),
