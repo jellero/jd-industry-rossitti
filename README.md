@@ -61,9 +61,10 @@ Se il database contiene importazioni storiche effettuate con la vecchia associaz
 
 ```text
 database/migrations/20260928_reconcile_production_jobs.sql
+database/migrations/20260929_harden_production_job_links.sql
 ```
 
-Questa seconda migration non cancella la produzione: rimuove solo le associazioni incompatibili e riassocia i record quando codice commessa e macchina coincidono.
+Le migration di riconciliazione non cancellano la produzione: rimuovono solo le associazioni incompatibili e riassociano i record quando codice commessa, tipo Maestro e macchina coincidono.
 
 Il file con credenziali locali non viene versionato. Copia:
 
