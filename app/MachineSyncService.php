@@ -32,10 +32,22 @@ final class MachineSyncService
             $infoRes = $client->info();
             $info = $infoRes['success'] ? ($infoRes['data'] ?? null) : null;
         }
-        $this->saveRuntime((int)$machine['id'], $status, $activeAlarms, $info);
-        $this->syncJobStates((int)$machine['id'], $status);
+        try {
+            $this->saveRuntime((int)$machine['id'], $status, $activeAlarms, $info);
+            $this->syncJobStates((int)$machine['id'], $status);
+        } catch (Throwable $e) {
+            return [
+                'success' => false,
+                'reachable' => true,
+                'status' => $status,
+                'active_alarms' => $activeAlarms,
+                'info' => $info,
+                'error' => 'Errore sincronizzazione gestionale: ' . $e->getMessage(),
+                'http_code' => 200,
+            ];
+        }
 
-        return ['success' => true, 'status' => $status, 'active_alarms' => $activeAlarms, 'info' => $info];
+        return ['success' => true, 'reachable' => true, 'status' => $status, 'active_alarms' => $activeAlarms, 'info' => $info];
     }
 
     public function syncFull(array $machine, int $productionLookbackMinutes, int $alarmLookbackMinutes, int $limit): array
