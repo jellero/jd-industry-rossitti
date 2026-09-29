@@ -11,7 +11,7 @@ $assetVersion = static function (string $relative): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="app-build" content="20260929-1040">
+  <meta name="app-build" content="20260929-1100">
   <title>Gestione Commesse e Produzione</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
@@ -55,7 +55,7 @@ $assetVersion = static function (string $relative): string {
       <div class="panel-head"><div><h3>Commesse recenti</h3><p class="muted">Ordinate dalla più recente alla meno recente.</p></div></div>
       <div class="table-wrap"><table id="dashboardJobsTable"></table></div>
     </div>
-    <details class="page-help"><summary>Guida Dashboard</summary><p>Controlla lo stato delle macchine, le commesse più recenti e gli indicatori principali. Usa “Aggiorna macchine” per forzare una lettura immediata delle macchine connesse.</p></details>
+    <details class="page-help"><summary>Guida Dashboard</summary><p>Controlla lo stato delle macchine, le commesse più recenti e gli indicatori principali. Dalla lista delle commesse recenti puoi aprire direttamente il relativo report. Usa “Aggiorna macchine” per forzare una lettura immediata delle macchine connesse.</p></details>
   </section>
 
   <section id="tab-jobs" class="tab">
@@ -74,7 +74,11 @@ $assetVersion = static function (string $relative): string {
       <form id="jobForm" class="form">
         <h3>Nuova / modifica commessa</h3>
         <input type="hidden" name="id">
-        <label>Cliente *<select name="client_id" required></select></label>
+        <div class="client-picker">
+          <label>Cerca cliente<input id="jobClientSearch" autocomplete="off" placeholder="Ragione sociale, codice, P. IVA o email"></label>
+          <label>Cliente *<select id="jobClientSelect" name="client_id" required></select></label>
+          <div id="jobClientSearchHint" class="muted small">Digita per filtrare, poi seleziona il cliente.</div>
+        </div>
         <label>Tipo lavoro *<select name="job_type_id" required></select></label>
         <label>Macchina<select name="machine_id"></select></label>
         <label>Codice commessa *<input name="job_code" required maxlength="80"></label>
@@ -99,7 +103,7 @@ $assetVersion = static function (string $relative): string {
         <div class="table-wrap"><table id="jobsTable"></table></div>
       </div>
     </div>
-    <details class="page-help"><summary>Guida Commesse</summary><p>Crea e modifica le commesse, filtra l’elenco e seleziona più commesse per inviarle alla bordatrice. Lo stato viene aggiornato anche dalle sincronizzazioni automatiche quando la macchina è raggiungibile.</p></details>
+    <details class="page-help"><summary>Guida Commesse</summary><p>Crea e modifica le commesse, cerca il cliente per ragione sociale, codice, P. IVA o email, filtra l’elenco e seleziona più commesse per inviarle alla bordatrice. Il pulsante Report apre direttamente il report della commessa.</p></details>
   </section>
 
   <section id="tab-maestro" class="tab">
@@ -184,7 +188,9 @@ $assetVersion = static function (string $relative): string {
       <div class="row wrap"><label>Associa a commessa<select id="assignJob"></select></label><button id="btnAssignFile">Associa</button><button id="btnUnassignFile" class="secondary">Rimuovi associazione</button><button id="btnFolderJobCreateToggle" class="secondary" type="button">Crea nuova commessa</button></div>
       <form id="folderJobCreateForm" class="form compact inline-create" hidden>
         <h3>Nuova commessa da cartella lavori</h3>
+        <label>Cerca cliente<input id="folderClientSearch" autocomplete="off" placeholder="Ragione sociale, codice, P. IVA o email"></label>
         <label>Cliente *<select id="folderNewClient" required></select></label>
+        <div id="folderClientSearchHint" class="muted small">Digita per filtrare, poi seleziona il cliente.</div>
         <label>Tipo lavoro *<select id="folderNewType" required></select></label>
         <label>Codice commessa *<input id="folderNewCode" required maxlength="80"></label>
         <label>Titolo *<input id="folderNewTitle" required maxlength="180"></label>
@@ -193,7 +199,7 @@ $assetVersion = static function (string $relative): string {
       </form>
       <div class="table-wrap"><table id="filesTable"></table></div>
     </div>
-    <details class="page-help"><summary>Guida Cartella lavori</summary><p>Scansiona la cartella della macchina, seleziona un file e associalo a una commessa esistente. Se la commessa non esiste, usa “Crea nuova commessa”: verrà creata per la macchina e resa subito disponibile per l’associazione.</p></details>
+    <details class="page-help"><summary>Guida Cartella lavori</summary><p>Scansiona la cartella della macchina, seleziona un file e associalo a una commessa esistente. Le commesse già associate aprono direttamente il relativo report. Se la commessa non esiste, usa “Crea nuova commessa”: puoi cercare il cliente e creare subito la commessa per la macchina.</p></details>
   </section>
 
   <section id="tab-scheduling" class="tab">
@@ -276,6 +282,6 @@ $assetVersion = static function (string $relative): string {
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app-20260928-1445.js?v=0929-1040"></script>
+<script src="assets/app-20260928-1445.js?v=0929-1100"></script>
 </body>
 </html>
