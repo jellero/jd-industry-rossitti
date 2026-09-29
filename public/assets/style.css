@@ -61,3 +61,7 @@ button{border:0;background:var(--primary);color:#fff;border-radius:8px;padding:1
 .client-picker{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe}
 .table-link{appearance:none;background:transparent;border:0;padding:0;color:var(--primary);font:inherit;font-weight:700;text-align:left;cursor:pointer}
 .table-link:hover{background:transparent;filter:none;text-decoration:underline}
+
+
+.machine-alert{margin:-2px 0 12px;padding:9px 11px;border-radius:9px;background:var(--danger-soft);color:var(--danger);font-size:12px;line-height:1.45}
+.machine-alert.compact{margin:8px 0 0}
