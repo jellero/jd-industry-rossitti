@@ -217,6 +217,7 @@ async function createFolderJob(e){
     const rows=await api('jobs',{query:{q:code}});
     const job=rows.find(function(r){ return Number(r.id)===Number(created.id); });
     if(job&&!state.jobs.some(function(r){ return Number(r.id)===Number(job.id); }))state.jobs.unshift(job);
+    if(job&&!state.jobOptions.some(function(r){ return Number(r.id)===Number(job.id); }))state.jobOptions.unshift(job);
     updateSelects();
     $('#assignJob').value=String(created.id);
     if(state.selectedFileId){
