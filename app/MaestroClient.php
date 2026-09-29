@@ -92,7 +92,7 @@ final class MaestroClient
             'current_order' => str_or_null($row['currentJobOrder'] ?? null),
             'order_status' => str_or_null($row['jobOrderStatus'] ?? null),
             'last_order_closed' => str_or_null($row['lastJobOrderClosed'] ?? null),
-            'execution_list_status' => str_or_null($row['executionListStatus'] ?? null),
+            'execution_list_status' => str_or_null($row['executionListStatus'] ?? $row['ExecutionlistStatus'] ?? $row['ExecutionListStatus'] ?? null),
             'user_name' => str_or_null($row['user'] ?? null),
             'raw' => $row,
         ];
