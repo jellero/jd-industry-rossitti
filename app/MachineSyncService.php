@@ -214,8 +214,8 @@ final class MachineSyncService
                 $newStatus = $remoteStatus === 'running' ? 'in_lavorazione' : ($remoteStatus === 'ended' ? 'chiusa' : null);
                 if ($newStatus) {
                     $closedAt = $newStatus === 'chiusa' ? date('Y-m-d H:i:s') : null;
-                    $this->pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=IF(? IS NULL, closed_at, COALESCE(closed_at, ?)) WHERE id=?')
-                        ->execute([$machineId, $newStatus, $closedAt, $closedAt, $jobId]);
+                    $this->pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=? WHERE id=?')
+                        ->execute([$machineId, $newStatus, $closedAt, $jobId]);
                 }
             }
         }
