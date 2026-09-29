@@ -24,15 +24,15 @@ final class MachineSyncService
             $activeAlarms = $client->normalizeAlarmResponse($alarmsRes);
         }
 
-        $stmt = $this->pdo->prepare('SELECT info_json FROM machine_runtime WHERE machine_id=?');
-        $stmt->execute([(int)$machine['id']]);
-        $existingInfo = $stmt->fetchColumn();
         $info = null;
-        if ($existingInfo === false || $existingInfo === null || $existingInfo === '') {
-            $infoRes = $client->info();
-            $info = $infoRes['success'] ? ($infoRes['data'] ?? null) : null;
-        }
         try {
+            $stmt = $this->pdo->prepare('SELECT info_json FROM machine_runtime WHERE machine_id=?');
+            $stmt->execute([(int)$machine['id']]);
+            $existingInfo = $stmt->fetchColumn();
+            if ($existingInfo === false || $existingInfo === null || $existingInfo === '') {
+                $infoRes = $client->info();
+                $info = $infoRes['success'] ? ($infoRes['data'] ?? null) : null;
+            }
             $this->saveRuntime((int)$machine['id'], $status, $activeAlarms, $info);
             $this->syncJobStates((int)$machine['id'], $status);
         } catch (Throwable $e) {
