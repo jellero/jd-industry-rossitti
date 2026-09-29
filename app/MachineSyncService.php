@@ -64,18 +64,35 @@ final class MachineSyncService
         $prodFrom = $now->modify('-' . max(1, $productionLookbackMinutes) . ' minutes');
         $alarmFrom = $now->modify('-' . max(1, $alarmLookbackMinutes) . ' minutes');
 
-        $result['production'] = $this->importProduction(
-            $machine,
-            $prodFrom->format('Y-m-d\TH:i:s'),
-            $now->format('Y-m-d\TH:i:s'),
-            $limit
-        );
-        $result['alarms'] = $this->importAlarms(
-            $machine,
-            $alarmFrom->format('Y-m-d\TH:i:s'),
-            $now->format('Y-m-d\TH:i:s'),
-            $limit
-        );
+        $errors = [];
+        try {
+            $result['production'] = $this->importProduction(
+                $machine,
+                $prodFrom->format('Y-m-d\TH:i:s'),
+                $now->format('Y-m-d\TH:i:s'),
+                $limit
+            );
+        } catch (Throwable $e) {
+            $result['production'] = ['success' => false, 'error' => $e->getMessage()];
+            $errors[] = $e->getMessage();
+        }
+
+        try {
+            $result['alarms'] = $this->importAlarms(
+                $machine,
+                $alarmFrom->format('Y-m-d\TH:i:s'),
+                $now->format('Y-m-d\TH:i:s'),
+                $limit
+            );
+        } catch (Throwable $e) {
+            $result['alarms'] = ['success' => false, 'error' => $e->getMessage()];
+            $errors[] = $e->getMessage();
+        }
+
+        if ($errors) {
+            $result['success'] = false;
+            $result['error'] = implode(' | ', $errors);
+        }
         return $result;
     }
 
