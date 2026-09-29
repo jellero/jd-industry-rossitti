@@ -132,7 +132,7 @@ async function loadReport(jobIdOverride){
   try{
     const result=await Promise.all([
       api('reports/job',{query:{job_id:jobId}}),
-      api('production',{query:{job_id:jobId}})
+      api('production',{query:{job_id:jobId,limit:10000}})
     ]);
     const r=result[0], prod=result[1];
     state.reportJobId=jobId;
