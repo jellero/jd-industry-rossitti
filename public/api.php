@@ -253,6 +253,25 @@ function jobs_list(): void
     ApiResponse::ok($stmt->fetchAll());
 }
 
+function job_machine_config_error(int $jobTypeId, ?int $machineId): ?string
+{
+    if (!$machineId) return null;
+    $stmt = Db::pdo()->prepare('SELECT jt.source_type, m.kind FROM job_types jt CROSS JOIN machines m WHERE jt.id=? AND m.id=?');
+    $stmt->execute([$jobTypeId, $machineId]);
+    $row = $stmt->fetch();
+    if (!$row) return 'Tipo lavoro o macchina non validi';
+
+    $sourceType = (string)$row['source_type'];
+    $kind = (string)$row['kind'];
+    if ($sourceType === 'MAESTRO_REST' && $kind !== 'maestro_rest') {
+        return 'Una commessa Maestro REST deve essere associata a una macchina Maestro REST';
+    }
+    if ($sourceType === 'SMB_FOLDER' && $kind !== 'folder') {
+        return 'Una commessa cartella/SMB deve essere associata a una macchina di tipo cartella';
+    }
+    return null;
+}
+
 function jobs_save(): void
 {
     $d = input_json();
@@ -270,6 +289,10 @@ function jobs_save(): void
 
     $machineId = int_or_null($d['machine_id'] ?? null);
     if ($machineId === 0) $machineId = null;
+    $configError = job_machine_config_error($jobTypeId, $machineId);
+    if ($configError !== null) ApiResponse::error($configError, 400);
+    $isClosed = in_array($status, ['chiusa','archiviata'], true);
+    $closedAt = $isClosed ? date('Y-m-d H:i:s') : null;
 
     $params = [
         $clientId,
@@ -281,14 +304,14 @@ function jobs_save(): void
         $status,
         date_or_null($d['start_date'] ?? null),
         date_or_null($d['due_date'] ?? null),
-        $status === 'chiusa' ? date('Y-m-d H:i:s') : null,
+        $closedAt,
         str_or_null($d['notes'] ?? null),
     ];
 
     $pdo = Db::pdo();
     if ($id > 0) {
-        $sql = 'UPDATE jobs SET client_id=?, job_type_id=?, machine_id=?, job_code=?, title=?, description=?, status=?, start_date=?, due_date=?, closed_at=IF(? IS NULL, closed_at, ?), notes=? WHERE id=?';
-        $exec = [$clientId, $jobTypeId, $machineId, normalize_order_name($jobCode), $title, str_or_null($d['description'] ?? null), $status, date_or_null($d['start_date'] ?? null), date_or_null($d['due_date'] ?? null), $status === 'chiusa' ? date('Y-m-d H:i:s') : null, $status === 'chiusa' ? date('Y-m-d H:i:s') : null, str_or_null($d['notes'] ?? null), $id];
+        $sql = 'UPDATE jobs SET client_id=?, job_type_id=?, machine_id=?, job_code=?, title=?, description=?, status=?, start_date=?, due_date=?, closed_at=CASE WHEN ?=1 THEN COALESCE(closed_at, ?) ELSE NULL END, notes=? WHERE id=?';
+        $exec = [$clientId, $jobTypeId, $machineId, normalize_order_name($jobCode), $title, str_or_null($d['description'] ?? null), $status, date_or_null($d['start_date'] ?? null), date_or_null($d['due_date'] ?? null), (int)$isClosed, $closedAt, str_or_null($d['notes'] ?? null), $id];
         $pdo->prepare($sql)->execute($exec);
     } else {
         $sql = 'INSERT INTO jobs (client_id, job_type_id, machine_id, job_code, title, description, status, start_date, due_date, closed_at, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
@@ -312,8 +335,10 @@ function jobs_status(): void
     $status = str_or_null($d['status'] ?? null);
     $allowed = ['bozza','aperta','in_lavorazione','chiusa','archiviata'];
     if (!in_array($status, $allowed, true)) ApiResponse::error('Stato non valido', 400);
-    $closedAt = $status === 'chiusa' ? date('Y-m-d H:i:s') : null;
-    Db::pdo()->prepare('UPDATE jobs SET status=?, closed_at=IF(? IS NULL, closed_at, ?) WHERE id=?')->execute([$status, $closedAt, $closedAt, $id]);
+    $isClosed = in_array($status, ['chiusa','archiviata'], true);
+    $closedAt = $isClosed ? date('Y-m-d H:i:s') : null;
+    Db::pdo()->prepare('UPDATE jobs SET status=?, closed_at=CASE WHEN ?=1 THEN COALESCE(closed_at, ?) ELSE NULL END WHERE id=?')
+        ->execute([$status, (int)$isClosed, $closedAt, $id]);
     ApiResponse::ok();
 }
 
@@ -388,8 +413,8 @@ function maestro_order(): void
     if ($res['success']) {
         $newStatus = $action === 'close' ? 'chiusa' : ($action === 'activate' ? 'in_lavorazione' : 'aperta');
         $closedAt = $action === 'close' ? date('Y-m-d H:i:s') : null;
-        $pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=IF(? IS NULL, closed_at, ?) WHERE id=?')
-            ->execute([(int)$machine['id'], $newStatus, $closedAt, $closedAt, (int)$job['id']]);
+        $pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=? WHERE id=?')
+            ->execute([(int)$machine['id'], $newStatus, $closedAt, (int)$job['id']]);
     }
 
     ApiResponse::ok($res);
@@ -583,8 +608,8 @@ function maestro_orders_bulk(): void
         if ($res['success']) {
             $status = $action === 'open' ? 'aperta' : 'chiusa';
             $closed = $action === 'close' ? date('Y-m-d H:i:s') : null;
-            $pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=IF(? IS NULL,closed_at,COALESCE(closed_at,?)) WHERE id=?')
-                ->execute([(int)$machine['id'], $status, $closed, $closed, $jobId]);
+            $pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=? WHERE id=?')
+                ->execute([(int)$machine['id'], $status, $closed, $jobId]);
         }
         $results[] = ['job_id'=>$jobId,'job_code'=>$job['job_code'],'success'=>$res['success'],'http_code'=>$res['http_code'],'error'=>$res['error']];
     }
