@@ -143,7 +143,7 @@ function dashboard(): void
     $data['production_rows'] = (int)$pdo->query('SELECT COUNT(*) FROM production_records')->fetchColumn();
     $data['machines'] = $pdo->query("SELECT m.id,m.name,m.kind,m.api_version,m.host,m.port,m.base_path,m.active,
         mr.online,mr.machine_state,mr.working,mr.alarms,mr.warnings,mr.track_speed,mr.empty_machine,mr.pieces_in_machine,
-        mr.current_order,mr.order_status,mr.last_order_closed,mr.execution_list_status,mr.user_name,mr.last_checked_at,mr.last_success_at,mr.last_error
+        mr.current_order,mr.order_status,mr.last_order_closed,mr.execution_list_status,mr.user_name,mr.active_alarms_json,mr.last_checked_at,mr.last_success_at,mr.last_error
         FROM machines m LEFT JOIN machine_runtime mr ON mr.machine_id=m.id WHERE m.active=1 ORDER BY m.id")->fetchAll();
     $data['recent_jobs'] = $pdo->query("SELECT j.id,j.job_code,j.title,j.status,j.updated_at,j.created_at,c.company_name,m.name machine_name
         FROM jobs j JOIN clients c ON c.id=j.client_id LEFT JOIN machines m ON m.id=j.machine_id
