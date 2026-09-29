@@ -11,7 +11,7 @@ $assetVersion = static function (string $relative): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="app-build" content="20260929-1205">
+  <meta name="app-build" content="20260929-1305">
   <title>Gestione Commesse e Produzione</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/style.css?v=<?= htmlspecialchars($assetVersion('assets/style.css'), ENT_QUOTES, 'UTF-8') ?>">
@@ -65,6 +65,7 @@ $assetVersion = static function (string $relative): string {
         <strong>Azioni multiple</strong>
         <label>Bordatrice<select id="bulkMachine"></select></label>
         <button id="btnBulkOpen">Apri selezionate su macchina</button>
+        <button id="btnBulkActivate">Attiva selezionata</button>
         <button id="btnBulkClose" class="danger">Chiudi selezionate</button>
         <span id="bulkCount" class="muted">0 selezionate</span>
       </div>
@@ -282,6 +283,6 @@ $assetVersion = static function (string $relative): string {
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="assets/app-20260928-1445.js?v=0929-1205"></script>
+<script src="assets/app-20260928-1445.js?v=0929-1305"></script>
 </body>
 </html>
