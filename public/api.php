@@ -1,4 +1,5 @@
 <?php
+ini_set('display_errors', '0');
 require_once __DIR__ . '/../app/ApiResponse.php';
 require_once __DIR__ . '/../app/Db.php';
 require_once __DIR__ . '/../app/Helpers.php';
@@ -327,11 +328,26 @@ function get_machine(int $id): array
 
 function get_job(int $id): array
 {
-    $stmt = Db::pdo()->prepare('SELECT * FROM jobs WHERE id=?');
+    $stmt = Db::pdo()->prepare('SELECT j.*, jt.source_type FROM jobs j JOIN job_types jt ON jt.id=j.job_type_id WHERE j.id=?');
     $stmt->execute([$id]);
     $job = $stmt->fetch();
     if (!$job) ApiResponse::error('Commessa non trovata', 404);
     return $job;
+}
+
+function maestro_job_machine_error(array $job, array $machine): ?string
+{
+    if (($machine['kind'] ?? '') !== 'maestro_rest') {
+        return 'La macchina selezionata non è una macchina Maestro REST';
+    }
+    if (($job['source_type'] ?? '') !== 'MAESTRO_REST') {
+        return 'La commessa selezionata non è di tipo Maestro REST';
+    }
+    $jobMachineId = (int)($job['machine_id'] ?? 0);
+    if ($jobMachineId > 0 && $jobMachineId !== (int)$machine['id']) {
+        return 'La commessa è associata a una macchina diversa';
+    }
+    return null;
 }
 
 function maestro_status(): void
@@ -354,6 +370,8 @@ function maestro_order(): void
     $job = get_job(require_id($d['job_id'] ?? null, 'job_id'));
     $machineId = (int)($d['machine_id'] ?? ($job['machine_id'] ?: 1));
     $machine = get_machine($machineId);
+    $compatibilityError = maestro_job_machine_error($job, $machine);
+    if ($compatibilityError !== null) ApiResponse::error($compatibilityError, 400);
     $action = str_or_null($d['action'] ?? null);
     if (!in_array($action, ['open','activate','close'], true)) ApiResponse::error('Azione non valida', 400);
 
@@ -382,9 +400,17 @@ function maestro_import_production(): void
     $d = input_json();
     $machine = get_machine(require_id($d['machine_id'] ?? 1, 'machine_id'));
     $jobId = int_or_null($d['job_id'] ?? null);
+    if ($jobId) {
+        $job = get_job($jobId);
+        $compatibilityError = maestro_job_machine_error($job, $machine);
+        if ($compatibilityError !== null) ApiResponse::error($compatibilityError, 400);
+    }
     $from = str_or_null($d['from'] ?? null);
     $to = str_or_null($d['to'] ?? null);
     if ($from === null || $to === null) ApiResponse::error('Date from/to obbligatorie', 400);
+    $fromTs = strtotime($from);
+    $toTs = strtotime($to);
+    if ($fromTs === false || $toTs === false || $fromTs > $toTs) ApiResponse::error('Intervallo date non valido', 400);
     $fromApi = str_replace(' ', 'T', $from);
     $toApi = str_replace(' ', 'T', $to);
     $limit = max(1, min(500, (int)($d['limit'] ?? 100)));
@@ -471,7 +497,34 @@ function files_assign(): void
     $d = input_json();
     $fileId = require_id($d['file_id'] ?? null, 'file_id');
     $jobId = require_id($d['job_id'] ?? null, 'job_id');
-    Db::pdo()->prepare('UPDATE job_files SET job_id=?, assigned_at=NOW() WHERE id=?')->execute([$jobId, $fileId]);
+    $pdo = Db::pdo();
+
+    $stmt = $pdo->prepare('SELECT id, machine_id FROM job_files WHERE id=?');
+    $stmt->execute([$fileId]);
+    $file = $stmt->fetch();
+    if (!$file) ApiResponse::error('File non trovato', 404);
+
+    $job = get_job($jobId);
+    if (($job['source_type'] ?? '') !== 'SMB_FOLDER') {
+        ApiResponse::error('Il file può essere associato solo a una commessa di tipo cartella/SMB', 400);
+    }
+    $fileMachineId = (int)$file['machine_id'];
+    $jobMachineId = (int)($job['machine_id'] ?? 0);
+    if ($jobMachineId > 0 && $jobMachineId !== $fileMachineId) {
+        ApiResponse::error('La commessa appartiene a una macchina diversa dal file', 400);
+    }
+
+    $pdo->beginTransaction();
+    try {
+        if ($jobMachineId === 0) {
+            $pdo->prepare('UPDATE jobs SET machine_id=? WHERE id=?')->execute([$fileMachineId, $jobId]);
+        }
+        $pdo->prepare('UPDATE job_files SET job_id=?, assigned_at=NOW() WHERE id=?')->execute([$jobId, $fileId]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
     ApiResponse::ok();
 }
 
@@ -518,6 +571,11 @@ function maestro_orders_bulk(): void
     $results = [];
     foreach ($jobIds as $jobId) {
         $job = get_job($jobId);
+        $compatibilityError = maestro_job_machine_error($job, $machine);
+        if ($compatibilityError !== null) {
+            $results[] = ['job_id'=>$jobId,'job_code'=>$job['job_code'],'success'=>false,'http_code'=>0,'error'=>$compatibilityError];
+            continue;
+        }
         $orderName = normalize_order_name($job['job_code']);
         $res = $action === 'open' ? $client->openOrder($orderName) : $client->closeOrder($orderName);
         $pdo->prepare('INSERT INTO maestro_order_events (job_id, machine_id, action, request_value, http_code, success, response_body, error_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -537,6 +595,7 @@ function scheduling_get(): void
 {
     $pdo = Db::pdo();
     $last = $pdo->query('SELECT * FROM scheduler_runs ORDER BY id DESC LIMIT 1')->fetch() ?: null;
+    $lastCron = $pdo->query("SELECT * FROM scheduler_runs WHERE triggered_by='cron' ORDER BY id DESC LIMIT 1")->fetch() ?: null;
     ApiResponse::ok([
         'enabled' => Settings::getBool('scheduler.enabled', true),
         'interval_minutes' => Settings::getInt('scheduler.interval_minutes', 5),
@@ -545,6 +604,7 @@ function scheduling_get(): void
         'page_limit' => Settings::getInt('scheduler.page_limit', 100),
         'dashboard_refresh_seconds' => Settings::getInt('dashboard.refresh_seconds', 10),
         'last_run' => $last,
+        'last_cron_run' => $lastCron,
     ]);
 }
 
@@ -572,28 +632,66 @@ function scheduler_run_manual(): void
     $pdo = Db::pdo();
     $d = input_json();
     $triggeredBy = (($d['triggered_by'] ?? 'manual') === 'cron') ? 'cron' : 'manual';
-    $machines = $pdo->query("SELECT * FROM machines WHERE active=1 AND kind='maestro_rest' ORDER BY id")->fetchAll();
-    $pdo->prepare('INSERT INTO scheduler_runs (started_at,success,triggered_by) VALUES (NOW(),0,?)')->execute([$triggeredBy]);
-    $runId = (int)$pdo->lastInsertId();
-    $sync = new MachineSyncService();
-    $details = [];
-    $ok = 0;
-    foreach ($machines as $machine) {
-        try {
-            $res = $sync->syncFull($machine,
-                Settings::getInt('scheduler.production_lookback_minutes',15),
-                Settings::getInt('scheduler.alarm_lookback_minutes',60),
-                Settings::getInt('scheduler.page_limit',100));
-            $details[$machine['name']] = $res;
-            if (!empty($res['success'])) $ok++;
-        } catch (Throwable $e) { $details[$machine['name']] = ['success'=>false,'error'=>$e->getMessage()]; }
-    }
-    $success = count($machines) === 0 || $ok === count($machines);
-    $pdo->prepare('UPDATE scheduler_runs SET finished_at=NOW(),success=?,machines_total=?,machines_ok=?,details_json=? WHERE id=?')
-        ->execute([(int)$success,count($machines),$ok,json_encode($details,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$runId]);
-    ApiResponse::ok(['run_id'=>$runId,'success'=>$success,'details'=>$details]);
-}
 
+    $lock = (int)$pdo->query("SELECT GET_LOCK('commesse_lite_scheduler', 0)")->fetchColumn();
+    if ($lock !== 1) {
+        ApiResponse::ok([
+            'run_id' => null,
+            'success' => true,
+            'skipped' => true,
+            'reason' => 'already_running',
+            'details' => [],
+        ]);
+    }
+
+    $runId = null;
+    $payload = null;
+    try {
+        $machines = $pdo->query("SELECT * FROM machines WHERE active=1 AND kind='maestro_rest' ORDER BY id")->fetchAll();
+        $pdo->prepare('INSERT INTO scheduler_runs (started_at,success,triggered_by) VALUES (NOW(),0,?)')->execute([$triggeredBy]);
+        $runId = (int)$pdo->lastInsertId();
+
+        $sync = new MachineSyncService();
+        $details = [];
+        $ok = 0;
+        foreach ($machines as $machine) {
+            try {
+                $res = $sync->syncFull(
+                    $machine,
+                    Settings::getInt('scheduler.production_lookback_minutes',15),
+                    Settings::getInt('scheduler.alarm_lookback_minutes',60),
+                    Settings::getInt('scheduler.page_limit',100)
+                );
+                $details[$machine['name']] = $res;
+                if (!empty($res['success'])) $ok++;
+            } catch (Throwable $e) {
+                $details[$machine['name']] = ['success'=>false,'error'=>$e->getMessage()];
+            }
+        }
+
+        $success = count($machines) === 0 || $ok === count($machines);
+        $pdo->prepare('UPDATE scheduler_runs SET finished_at=NOW(),success=?,machines_total=?,machines_ok=?,details_json=? WHERE id=?')
+            ->execute([(int)$success,count($machines),$ok,json_encode($details,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$runId]);
+
+        $payload = ['run_id'=>$runId,'success'=>$success,'skipped'=>false,'details'=>$details];
+    } catch (Throwable $e) {
+        if ($runId !== null) {
+            try {
+                $pdo->prepare('UPDATE scheduler_runs SET finished_at=NOW(),success=0,error_message=? WHERE id=?')
+                    ->execute([$e->getMessage(), $runId]);
+            } catch (Throwable $ignored) {
+            }
+        }
+        throw $e;
+    } finally {
+        try {
+            $pdo->query("SELECT RELEASE_LOCK('commesse_lite_scheduler')");
+        } catch (Throwable $ignored) {
+        }
+    }
+
+    ApiResponse::ok($payload);
+}
 function costs_get(): void
 {
     ApiResponse::ok([
@@ -665,33 +763,51 @@ function company_logo_upload(): void
     $mime = '';
     if (class_exists('finfo')) {
         $fi = new finfo(FILEINFO_MIME_TYPE);
-        $mime = (string)$fi->file($file['tmp_name']);
+        $mime = (string)@$fi->file($file['tmp_name']);
     }
+    if ($mime === '' && function_exists('getimagesize')) {
+        $imageInfo = @getimagesize($file['tmp_name']);
+        if (is_array($imageInfo) && isset($imageInfo['mime'])) $mime = (string)$imageInfo['mime'];
+    }
+
     $allowed = ['image/png'=>'png','image/jpeg'=>'jpg','image/webp'=>'webp'];
     if (!isset($allowed[$mime])) {
         ApiResponse::error('Formato logo non supportato. Usa PNG, JPG o WebP', 400);
     }
 
     $dir = __DIR__ . '/uploads/company';
-    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
         throw new RuntimeException('Impossibile creare la cartella del logo');
     }
 
-    foreach (glob($dir . '/logo.*') ?: [] as $old) {
-        if (is_file($old)) @unlink($old);
+    $extension = $allowed[$mime];
+    $filename = 'logo.' . $extension;
+    $destination = $dir . '/' . $filename;
+    $temporary = $dir . '/.logo-upload-' . uniqid('', true) . '.' . $extension;
+
+    if (!@move_uploaded_file($file['tmp_name'], $temporary)) {
+        throw new RuntimeException('Impossibile salvare il logo: verifica i permessi della cartella uploads/company');
     }
 
-    $filename = 'logo.' . $allowed[$mime];
-    $destination = $dir . '/' . $filename;
-    if (!move_uploaded_file($file['tmp_name'], $destination)) {
-        throw new RuntimeException('Impossibile salvare il logo');
+    try {
+        foreach (glob($dir . '/logo.*') ?: [] as $old) {
+            if (is_file($old) && $old !== $destination) @unlink($old);
+        }
+        if (is_file($destination) && !@unlink($destination)) {
+            throw new RuntimeException('Impossibile sostituire il logo esistente');
+        }
+        if (!@rename($temporary, $destination)) {
+            throw new RuntimeException('Impossibile finalizzare il nuovo logo');
+        }
+    } catch (Throwable $e) {
+        if (is_file($temporary)) @unlink($temporary);
+        throw $e;
     }
 
     $relative = 'uploads/company/' . $filename;
     Settings::setMany(['company.logo_path' => $relative]);
     ApiResponse::ok(['logo_path' => $relative]);
 }
-
 function job_report(): void
 {
     $jobId = require_id($_GET['job_id'] ?? null, 'job_id');
