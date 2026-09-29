@@ -620,10 +620,9 @@ function maestro_orders_bulk(): void
     $d = input_json();
     $machine = get_machine(require_id($d['machine_id'] ?? 1, 'machine_id'));
     $action = str_or_null($d['action'] ?? 'open');
-    if (!in_array($action, ['open','activate','close'], true)) ApiResponse::error('Azione bulk non valida', 400);
+    if (!in_array($action, ['open','close'], true)) ApiResponse::error('Azione bulk non valida', 400);
     $jobIds = array_values(array_unique(array_filter(array_map('intval', (array)($d['job_ids'] ?? [])))));
     if (!$jobIds) ApiResponse::error('Seleziona almeno una commessa', 400);
-    if ($action === 'activate' && count($jobIds) !== 1) ApiResponse::error('Per attivare seleziona una sola commessa', 400);
     if (count($jobIds) > 100) ApiResponse::error('Massimo 100 commesse per invio', 400);
 
     $client = new MaestroClient($machine);
@@ -637,13 +636,11 @@ function maestro_orders_bulk(): void
             continue;
         }
         $orderName = normalize_order_name($job['job_code']);
-        $res = $action === 'open'
-            ? $client->openOrder($orderName)
-            : ($action === 'activate' ? $client->activateOrder($orderName) : $client->closeOrder($orderName));
+        $res = $action === 'open' ? $client->openOrder($orderName) : $client->closeOrder($orderName);
         $pdo->prepare('INSERT INTO maestro_order_events (job_id, machine_id, action, request_value, http_code, success, response_body, error_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
             ->execute([$jobId, (int)$machine['id'], $action, $orderName, $res['http_code'], (int)$res['success'], $res['body'], $res['error']]);
         if ($res['success']) {
-            $status = $action === 'open' ? 'aperta' : ($action === 'activate' ? 'in_lavorazione' : 'chiusa');
+            $status = $action === 'open' ? 'aperta' : 'chiusa';
             $closed = $action === 'close' ? date('Y-m-d H:i:s') : null;
             $pdo->prepare('UPDATE jobs SET machine_id=?, status=?, closed_at=? WHERE id=?')
                 ->execute([(int)$machine['id'], $status, $closed, $jobId]);
