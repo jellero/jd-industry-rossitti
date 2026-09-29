@@ -815,14 +815,11 @@ function company_logo_upload(): void
     }
 
     try {
-        foreach (glob($dir . '/logo.*') ?: [] as $old) {
-            if (is_file($old) && $old !== $destination) @unlink($old);
-        }
-        if (is_file($destination) && !@unlink($destination)) {
-            throw new RuntimeException('Impossibile sostituire il logo esistente');
-        }
         if (!@rename($temporary, $destination)) {
             throw new RuntimeException('Impossibile finalizzare il nuovo logo');
+        }
+        foreach (glob($dir . '/logo.*') ?: [] as $old) {
+            if (is_file($old) && $old !== $destination) @unlink($old);
         }
     } catch (Throwable $e) {
         if (is_file($temporary)) @unlink($temporary);
