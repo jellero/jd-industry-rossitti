@@ -499,7 +499,8 @@ function production_list(): void
             LEFT JOIN clients c ON c.id=j.client_id
             JOIN machines m ON m.id=pr.machine_id';
     if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-    $sql .= ' ORDER BY pr.datetime_start DESC, pr.id DESC LIMIT 500';
+    $limit = max(1, min(10000, (int)($_GET['limit'] ?? 500)));
+    $sql .= ' ORDER BY pr.datetime_start DESC, pr.id DESC LIMIT ' . $limit;
     $stmt = Db::pdo()->prepare($sql);
     $stmt->execute($params);
     ApiResponse::ok($stmt->fetchAll());
@@ -864,16 +865,42 @@ function job_report(): void
     if (!$job) ApiResponse::error('Commessa non trovata',404);
 
     $stmt = $pdo->prepare("SELECT COUNT(*) panels, MIN(datetime_start) first_start, MAX(datetime_end) last_end,
-        COALESCE(SUM(edge_consumption_lh),0) edge_mm,
-        COALESCE(SUM(CASE WHEN datetime_start IS NOT NULL AND datetime_end IS NOT NULL AND datetime_end>=datetime_start THEN TIMESTAMPDIFF(SECOND,datetime_start,datetime_end) ELSE 0 END),0) process_seconds
+        COALESCE(SUM(edge_consumption_lh),0) edge_mm
         FROM production_records WHERE job_id=?");
     $stmt->execute([$jobId]);
     $agg = $stmt->fetch();
+
+    $stmt = $pdo->prepare('SELECT datetime_start, datetime_end FROM production_records
+        WHERE job_id=? AND datetime_start IS NOT NULL AND datetime_end IS NOT NULL AND datetime_end>=datetime_start
+        ORDER BY datetime_start, datetime_end');
+    $stmt->execute([$jobId]);
+    $processSeconds = 0;
+    $intervalStart = null;
+    $intervalEnd = null;
+    foreach ($stmt->fetchAll() as $interval) {
+        $startTs = strtotime((string)$interval['datetime_start']);
+        $endTs = strtotime((string)$interval['datetime_end']);
+        if ($startTs === false || $endTs === false || $endTs < $startTs) continue;
+        if ($intervalStart === null) {
+            $intervalStart = $startTs;
+            $intervalEnd = $endTs;
+            continue;
+        }
+        if ($startTs <= $intervalEnd) {
+            if ($endTs > $intervalEnd) $intervalEnd = $endTs;
+        } else {
+            $processSeconds += $intervalEnd - $intervalStart;
+            $intervalStart = $startTs;
+            $intervalEnd = $endTs;
+        }
+    }
+    if ($intervalStart !== null) $processSeconds += $intervalEnd - $intervalStart;
+
     $stmt = $pdo->prepare('SELECT COALESCE(edge_name_lh,\'Senza bordo\') edge_name, COUNT(*) panels, COALESCE(SUM(edge_consumption_lh),0) edge_mm FROM production_records WHERE job_id=? GROUP BY edge_name_lh ORDER BY edge_mm DESC');
     $stmt->execute([$jobId]);
     $edges = $stmt->fetchAll();
 
-    $hours = ((float)$agg['process_seconds']) / 3600;
+    $hours = ((float)$processSeconds) / 3600;
     $edgeMeters = ((float)$agg['edge_mm']) / 1000;
     $machineRate = Settings::getFloat('cost.machine_hour',0);
     $edgeRate = Settings::getFloat('cost.edge_meter',0);
@@ -889,7 +916,7 @@ function job_report(): void
         'job'=>$job,
         'production'=>[
             'panels'=>(int)$agg['panels'],'first_start'=>$agg['first_start'],'last_end'=>$agg['last_end'],
-            'process_seconds'=>(int)$agg['process_seconds'],'process_hours'=>round($hours,4),'edge_meters'=>round($edgeMeters,3),
+            'process_seconds'=>(int)$processSeconds,'process_hours'=>round($hours,4),'edge_meters'=>round($edgeMeters,3),
             'edges'=>$edges,
         ],
         'rates'=>['machine_hour'=>$machineRate,'edge_meter'=>$edgeRate,'fixed_job'=>$fixed,'overhead_percent'=>$overheadPct],
