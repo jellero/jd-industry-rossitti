@@ -36,13 +36,18 @@ final class MachineSyncService
             $this->saveRuntime((int)$machine['id'], $status, $activeAlarms, $info);
             $this->syncJobStates((int)$machine['id'], $status);
         } catch (Throwable $e) {
+            $localError = 'Errore sincronizzazione gestionale: ' . $e->getMessage();
+            try {
+                $this->saveRuntimeLocalError((int)$machine['id'], $localError);
+            } catch (Throwable $ignored) {
+            }
             return [
                 'success' => false,
                 'reachable' => true,
                 'status' => $status,
                 'active_alarms' => $activeAlarms,
                 'info' => $info,
-                'error' => 'Errore sincronizzazione gestionale: ' . $e->getMessage(),
+                'error' => $localError,
                 'http_code' => 200,
             ];
         }
@@ -81,6 +86,7 @@ final class MachineSyncService
         $totalPages = 1;
         $seen = 0;
         $inserted = 0;
+        $updated = 0;
         $limit = max(1, min(500, $limit));
 
         do {
@@ -93,22 +99,39 @@ final class MachineSyncService
             foreach ($records as $r) {
                 $jobId = $this->findJobByCode($r['remote_order_name'], (int)$machine['id']);
                 if ($forcedJobId !== null && $jobId !== $forcedJobId) continue;
-                $stmt = $this->pdo->prepare('INSERT IGNORE INTO production_records
+                $stmt = $this->pdo->prepare('INSERT INTO production_records
                     (machine_id, job_id, remote_order_name, barcode, program_name, length_mm, width_mm, thickness_mm, passage, edge_name_lh, edge_consumption_lh, datetime_start, datetime_end, track_speed, raw_json, source_hash)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                      job_id=VALUES(job_id),
+                      remote_order_name=VALUES(remote_order_name),
+                      barcode=VALUES(barcode),
+                      program_name=VALUES(program_name),
+                      length_mm=VALUES(length_mm),
+                      width_mm=VALUES(width_mm),
+                      thickness_mm=VALUES(thickness_mm),
+                      passage=VALUES(passage),
+                      edge_name_lh=VALUES(edge_name_lh),
+                      edge_consumption_lh=VALUES(edge_consumption_lh),
+                      datetime_start=VALUES(datetime_start),
+                      datetime_end=VALUES(datetime_end),
+                      track_speed=VALUES(track_speed),
+                      raw_json=VALUES(raw_json)');
                 $stmt->execute([
                     (int)$machine['id'], $jobId, $r['remote_order_name'], $r['barcode'], $r['program_name'],
                     $r['length_mm'], $r['width_mm'], $r['thickness_mm'], $r['passage'], $r['edge_name_lh'],
                     $r['edge_consumption_lh'], $r['datetime_start'], $r['datetime_end'], $r['track_speed'],
                     $r['raw_json'], $r['source_hash'],
                 ]);
-                $inserted += $stmt->rowCount();
+                $affected = $stmt->rowCount();
+                if ($affected === 1) $inserted++;
+                elseif ($affected >= 2) $updated++;
             }
             $totalPages = $client->totalPages($res);
             $page++;
         } while ($page <= $totalPages && $page <= 100);
 
-        return ['seen' => $seen, 'inserted' => $inserted, 'pages' => $totalPages];
+        return ['seen' => $seen, 'inserted' => $inserted, 'updated' => $updated, 'pages' => $totalPages];
     }
 
     public function importAlarms(array $machine, string $from, string $to, int $limit = 100): array
@@ -165,6 +188,13 @@ final class MachineSyncService
             $info === null ? null : json_encode($info, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             json_encode($s['raw'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ]);
+    }
+
+    private function saveRuntimeLocalError(int $machineId, string $error): void
+    {
+        $this->pdo->prepare('INSERT INTO machine_runtime (machine_id, online, last_checked_at, last_error)
+            VALUES (?,1,NOW(),?) ON DUPLICATE KEY UPDATE online=1,last_checked_at=NOW(),last_error=VALUES(last_error)')
+            ->execute([$machineId, $error]);
     }
 
     private function saveRuntimeError(int $machineId, string $error): void
