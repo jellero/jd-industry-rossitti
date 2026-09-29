@@ -136,9 +136,16 @@ if ($runError !== null || $runStatus < 200 || $runStatus >= 300 || !is_array($ru
 }
 
 $result = isset($runJson['data']) && is_array($runJson['data']) ? $runJson['data'] : [];
-$heartbeat['state'] = !empty($result['success']) ? 'ok' : 'warning';
-$heartbeat['message'] = !empty($result['success']) ? 'Sincronizzazione automatica completata' : 'Sincronizzazione completata con errori';
-$heartbeat['last_run_id'] = isset($result['run_id']) ? $result['run_id'] : null;
+if (!empty($result['skipped'])) {
+    $heartbeat['state'] = 'waiting';
+    $heartbeat['message'] = 'Sincronizzazione già in esecuzione';
+} else {
+    $heartbeat['state'] = !empty($result['success']) ? 'ok' : 'warning';
+    $heartbeat['message'] = !empty($result['success']) ? 'Sincronizzazione automatica completata' : 'Sincronizzazione completata con errori';
+}
+if (isset($result['run_id']) && $result['run_id'] !== null) {
+    $heartbeat['last_run_id'] = $result['run_id'];
+}
 scheduler_write_heartbeat($heartbeatFile, $heartbeat);
 
 fwrite(STDOUT, $heartbeat['message'] . "\n");
