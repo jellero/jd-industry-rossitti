@@ -41,7 +41,14 @@ function resetJobForm(){ const form=$('#jobForm'); resetForm(form); if($('#jobCl
 function editJob(job){ if(!job)return; const form=$('#jobForm'); fillForm(form,job); if($('#jobClientSearch'))$('#jobClientSearch').value=job.company_name||''; renderClientPicker('#jobClientSearch','#jobClientSelect','#jobClientSearchHint',job.client_id); form?.scrollIntoView({behavior:'smooth',block:'start'}); }
 function openReportByJobId(jobId){ const id=Number(jobId||0); if(!id)return; const job=(state.jobOptions.length?state.jobOptions:state.jobs).find(r=>Number(r.id)===id)||state.jobs.find(r=>Number(r.id)===id); if(job)selectReportJob(job,false); else { state.reportJobId=id; if($('#reportJobId'))$('#reportJobId').value=String(id); if($('#reportSearchResults'))$('#reportSearchResults').hidden=true; } if($('#btnReportPrint'))$('#btnReportPrint').disabled=true; const tab=$('[data-tab="reports"]'); if(tab)tab.click(); loadReport(id); }
 function openJobsForClient(clientId){ const id=Number(clientId||0); const rows=state.clientOptions.length?state.clientOptions:state.clients; const client=rows.find(c=>Number(c.id)===id); if(!client)return; if($('#jobSearch'))$('#jobSearch').value=client.company_name||client.code||''; if($('#jobStatusFilter'))$('#jobStatusFilter').value=''; const tab=$('[data-tab="jobs"]'); if(tab)tab.click(); loadJobs(); }
-function renderTable(table,cols,rows,actions=null){ if(!table)return; const head='<thead><tr>'+cols.map(c=>`<th>${esc(c.label)}</th>`).join('')+(actions?'<th>Azioni</th>':'')+'</tr></thead>'; const body=rows.length?rows.map(r=>'<tr>'+cols.map(c=>`<td>${c.render?c.render(r):esc(r[c.key])}</td>`).join('')+(actions?`<td class="actions">${actions(r)}</td>`:'')+'</tr>').join(''):`<tr><td colspan="${cols.length+(actions?1:0)}" class="muted">Nessun dato</td></tr>`; table.innerHTML=head+'<tbody>'+body+'</tbody>'; }
+function renderTable(table,cols,rows,actions=null){
+  if(!table)return;
+  const head='<thead><tr>'+cols.map(c=>`<th>${esc(c.label)}</th>`).join('')+(actions?'<th>Azioni</th>':'')+'</tr></thead>';
+  const body=rows.length
+    ? rows.map(r=>'<tr>'+cols.map(c=>`<td data-label="${esc(c.label)}">${c.render?c.render(r):esc(r[c.key])}</td>`).join('')+(actions?`<td class="actions" data-label="Azioni">${actions(r)}</td>`:'')+'</tr>').join('')
+    : `<tr class="table-empty-row"><td colspan="${cols.length+(actions?1:0)}" class="muted table-empty">Nessun dato</td></tr>`;
+  table.innerHTML=head+'<tbody>'+body+'</tbody>';
+}
 function badge(status){ return `<span class="badge ${esc(status)}">${esc(String(status||'').replaceAll('_',' '))}</span>`; }
 function activeAlarms(value){
   if(Array.isArray(value))return value;
@@ -156,7 +163,33 @@ function scheduleDashboardPolling(){
   if(document.visibilityState==='visible' && tab?.classList.contains('active'))tick();
 }
 
-async function loadClients(){ const q=$('#clientSearch')?.value||''; const requests=[api('clients',{query:{q:q}})]; if(q.trim())requests.push(api('clients')); const result=await Promise.all(requests); state.clients=result[0]; state.clientOptions=result[1]||result[0]; renderTable($('#clientsTable'),[{label:'Codice',key:'code'},{label:'Ragione sociale',key:'company_name'},{label:'Email',key:'email'},{label:'Telefono',key:'phone'},{label:'Attivo',render:r=>Number(r.active)?'Sì':'No'}],state.clients,r=>`<button type="button" data-client-jobs="${r.id}" class="secondary">Commesse</button><button data-edit-client="${r.id}" class="secondary">Modifica</button><button data-del-client="${r.id}" class="danger">Elimina</button>`); all('[data-edit-client]').forEach(b=>b.addEventListener('click',()=>fillForm($('#clientForm'),state.clients.find(x=>x.id==b.dataset.editClient)))); all('[data-del-client]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Eliminare il cliente?'))return; try{await api('clients',{method:'DELETE',query:{id:b.dataset.delClient}}); await loadClients(); toast('Cliente eliminato');}catch(e){toast(e.message,'error');}})); updateSelects(); }
+async function loadClients(){
+  const q=$('#clientSearch')?.value||'';
+  const requests=[api('clients',{query:{q:q}})];
+  if(q.trim())requests.push(api('clients'));
+  const result=await Promise.all(requests);
+  state.clients=result[0];
+  state.clientOptions=result[1]||result[0];
+  renderTable(
+    $('#clientsTable'),
+    [
+      {label:'Codice',key:'code'},
+      {label:'Ragione sociale',key:'company_name'},
+      {label:'Email',key:'email'},
+      {label:'Telefono',key:'phone'},
+      {label:'Attivo',render:r=>Number(r.active)?'Sì':'No'}
+    ],
+    state.clients,
+    r=>`<button type="button" data-client-jobs="${r.id}" class="secondary client-action-jobs">Commesse</button><button type="button" data-edit-client="${r.id}" class="secondary">Modifica</button><button type="button" data-del-client="${r.id}" class="danger">Elimina</button>`
+  );
+  all('[data-edit-client]').forEach(b=>b.addEventListener('click',()=>fillForm($('#clientForm'),state.clients.find(x=>x.id==b.dataset.editClient))));
+  all('[data-del-client]').forEach(b=>b.addEventListener('click',async()=>{
+    if(!confirm('Eliminare il cliente?'))return;
+    try{await api('clients',{method:'DELETE',query:{id:b.dataset.delClient}}); await loadClients(); toast('Cliente eliminato');}
+    catch(e){toast(e.message,'error');}
+  }));
+  updateSelects();
+}
 async function loadJobTypes(){ state.jobTypes=await api('job-types'); updateSelects(); }
 async function loadMachines(){ state.machines=await api('machines'); renderTable($('#machinesTable'),[{label:'Nome',key:'name'},{label:'Tipo',key:'kind'},{label:'API',key:'api_version'},{label:'Host',key:'host'},{label:'Porta',key:'port'},{label:'Base path',key:'base_path'},{label:'Online',render:r=>r.kind==='maestro_rest'?(Number(r.online)?'<span class="badge online">Online</span>':'<span class="badge offline">Offline</span>'):'—'},{label:'Ultimo controllo',render:r=>fmtDateTime(r.last_checked_at)}],state.machines,r=>`<button data-edit-machine="${r.id}" class="secondary">Modifica</button>`); all('[data-edit-machine]').forEach(b=>b.addEventListener('click',()=>fillForm($('#machineForm'),state.machines.find(x=>x.id==b.dataset.editMachine)))); updateSelects(); }
 async function loadJobs(){ const q=$('#jobSearch')?.value||'', status=$('#jobStatusFilter')?.value||''; const requests=[api('jobs',{query:{q:q,status:status}})]; if(q.trim()||status)requests.push(api('jobs')); const result=await Promise.all(requests); state.jobs=result[0]; state.jobOptions=result[1]||result[0]; renderJobs(); updateSelects(); }
@@ -164,7 +197,7 @@ function renderJobs(){
   renderTable(
     $('#jobsTable'),
     [
-      {label:'',render:r=>r.source_type==='MAESTRO_REST'?`<input type="checkbox" class="job-check" value="${r.id}" ${state.selectedJobs.has(String(r.id))?'checked':''}>`:''},
+      {label:'',render:r=>r.source_type==='MAESTRO_REST'?`<input type="checkbox" class="job-check" aria-label="Seleziona commessa ${esc(r.job_code)}" value="${r.id}" ${state.selectedJobs.has(String(r.id))?'checked':''}>`:''},
       {label:'Codice',render:r=>`<strong>${esc(r.job_code)}</strong>`},
       {label:'Titolo',key:'title'},
       {label:'Cliente',key:'company_name'},
@@ -175,9 +208,9 @@ function renderJobs(){
     state.jobs,
     r=>{
       const activate=(r.source_type==='MAESTRO_REST'&&r.status==='aperta')
-        ?`<button type="button" data-activate-job="${r.id}">Attiva lavorazione</button>`
+        ?`<button type="button" data-activate-job="${r.id}" class="job-action-activate">Attiva lavorazione</button>`
         :'';
-      return `${activate}<button type="button" data-open-report="${r.id}" class="secondary">Report</button><button data-edit-job="${r.id}" class="secondary">Modifica</button><button data-del-job="${r.id}" class="danger">Elimina</button>`;
+      return `${activate}<button type="button" data-open-report="${r.id}" class="secondary">Report</button><button type="button" data-edit-job="${r.id}" class="secondary">Modifica</button><button type="button" data-del-job="${r.id}" class="danger">Elimina</button>`;
     }
   );
   all('.job-check').forEach(ch=>ch.addEventListener('change',()=>{ch.checked?state.selectedJobs.add(ch.value):state.selectedJobs.delete(ch.value); updateBulkCount();}));
@@ -423,5 +456,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('Gestionale UI build 20260929-1315');
+console.info('Gestionale UI build 20260929-1350');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
