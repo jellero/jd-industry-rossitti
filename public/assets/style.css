@@ -55,3 +55,9 @@ button{border:0;background:var(--primary);color:#fff;border-radius:8px;padding:1
   #reportDocument tr{break-inside:avoid}
   #reportDocument h3{break-after:avoid}
 }
+
+
+/* Ricerca clienti e navigazione tra pagine */
+.client-picker{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe}
+.table-link{appearance:none;background:transparent;border:0;padding:0;color:var(--primary);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.table-link:hover{background:transparent;filter:none;text-decoration:underline}
