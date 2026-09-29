@@ -14,83 +14,107 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 try {
     switch ($route) {
         case 'health':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             health();
             break;
         case 'dashboard':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             dashboard();
             break;
         case 'machines/live':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             machines_live();
             break;
         case 'scheduling':
             if ($method === 'GET') scheduling_get();
-            if ($method === 'POST') scheduling_save();
+            elseif ($method === 'POST') scheduling_save();
+            else ApiResponse::error('Metodo non consentito', 405);
             break;
         case 'scheduler/run':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             scheduler_run_manual();
             break;
         case 'costs':
             if ($method === 'GET') costs_get();
-            if ($method === 'POST') costs_save();
+            elseif ($method === 'POST') costs_save();
+            else ApiResponse::error('Metodo non consentito', 405);
             break;
         case 'company-settings':
             if ($method === 'GET') company_settings_get();
-            if ($method === 'POST') company_settings_save();
+            elseif ($method === 'POST') company_settings_save();
+            else ApiResponse::error('Metodo non consentito', 405);
             break;
         case 'company-logo':
-            if ($method === 'POST') company_logo_upload();
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
+            company_logo_upload();
             break;
         case 'reports/job':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             job_report();
             break;
         case 'clients':
             if ($method === 'GET') clients_list();
-            if ($method === 'POST') clients_save();
-            if ($method === 'DELETE') clients_delete();
+            elseif ($method === 'POST') clients_save();
+            elseif ($method === 'DELETE') clients_delete();
+            else ApiResponse::error('Metodo non consentito', 405);
             break;
         case 'job-types':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             job_types_list();
             break;
         case 'machines':
             if ($method === 'GET') machines_list();
-            if ($method === 'POST') machines_save();
+            elseif ($method === 'POST') machines_save();
+            else ApiResponse::error('Metodo non consentito', 405);
             break;
         case 'jobs':
             if ($method === 'GET') jobs_list();
-            if ($method === 'POST') jobs_save();
-            if ($method === 'DELETE') jobs_delete();
+            elseif ($method === 'POST') jobs_save();
+            elseif ($method === 'DELETE') jobs_delete();
+            else ApiResponse::error('Metodo non consentito', 405);
             break;
         case 'jobs/status':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             jobs_status();
             break;
         case 'maestro/status':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             maestro_status();
             break;
         case 'maestro/info':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             maestro_info();
             break;
         case 'maestro/order':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             maestro_order();
             break;
         case 'maestro/orders-bulk':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             maestro_orders_bulk();
             break;
         case 'maestro/import-production':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             maestro_import_production();
             break;
         case 'production':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             production_list();
             break;
         case 'files/scan':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             files_scan();
             break;
         case 'files':
+            if ($method !== 'GET') ApiResponse::error('Metodo non consentito', 405);
             files_list();
             break;
         case 'files/assign':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             files_assign();
             break;
         case 'files/unassign':
+            if ($method !== 'POST') ApiResponse::error('Metodo non consentito', 405);
             files_unassign();
             break;
         default:
