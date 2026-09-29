@@ -45,7 +45,20 @@ function renderTable(table,cols,rows,actions=null){ if(!table)return; const head
 function badge(status){ return `<span class="badge ${esc(status)}">${esc(String(status||'').replaceAll('_',' '))}</span>`; }
 
 async function bootstrap(){ bindTabs(); bindForms(); bindButtons(); setDefaultDateTimes(); await loadBaseData(); await Promise.all([loadDashboard(),loadJobs(),loadFiles(),loadProduction(),loadScheduling(),loadCosts(),loadCompanySettings()]); scheduleDashboardPolling(); }
-function bindTabs(){ all('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{ all('.tabs button').forEach(b=>b.classList.remove('active')); all('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); const tab=$('#tab-'+btn.dataset.tab); if(tab)tab.classList.add('active'); if(btn.dataset.tab==='dashboard')refreshMachineLive(false); })); }
+function bindTabs(){
+  all('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{
+    all('.tabs button').forEach(b=>b.classList.remove('active'));
+    all('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    const tab=$('#tab-'+btn.dataset.tab);
+    if(tab)tab.classList.add('active');
+    if(btn.dataset.tab==='dashboard')refreshMachineLive(false);
+  }));
+  document.addEventListener('visibilitychange',()=>{
+    const tab=$('#tab-dashboard');
+    if(document.visibilityState==='visible'&&tab?.classList.contains('active'))refreshMachineLive(false);
+  });
+}
 function bindForms(){
   bind('#clientForm','submit',async e=>{ e.preventDefault(); try{ await api('clients',{body:formToObject(e.currentTarget)}); resetForm(e.currentTarget); await loadClients(); await loadJobs(); toast('Cliente salvato'); }catch(err){toast(err.message,'error');} });
   bind('#jobForm','submit',async e=>{ e.preventDefault(); if(!$('#jobClientSelect')?.value)return toast('Cerca e seleziona un cliente','error'); try{ await api('jobs',{body:formToObject(e.currentTarget)}); resetJobForm(); await loadJobs(); await loadDashboard(); toast('Commessa salvata'); }catch(err){toast(err.message,'error');} });
@@ -319,5 +332,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('Gestionale UI build 20260929-1140');
+console.info('Gestionale UI build 20260929-1150');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
