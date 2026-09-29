@@ -94,7 +94,7 @@ function bindButtons(){
   bind('#btnJobSearch','click',loadJobs); bind('#jobSearch','keydown',e=>{if(e.key==='Enter')loadJobs();}); bind('#jobStatusFilter','change',loadJobs);
   bind('#jobClientSearch','input',()=>renderClientPicker('#jobClientSearch','#jobClientSelect','#jobClientSearchHint'));
   bind('#folderClientSearch','input',()=>renderClientPicker('#folderClientSearch','#folderNewClient','#folderClientSearchHint'));
-  bind('#btnBulkOpen','click',()=>bulkOrder('open')); bind('#btnBulkActivate','click',()=>bulkOrder('activate')); bind('#btnBulkClose','click',()=>bulkOrder('close'));
+  bind('#btnBulkOpen','click',()=>bulkOrder('open')); bind('#btnBulkClose','click',()=>bulkOrder('close'));
   bind('#maestroMachine','change',updateSelects); bind('#folderMachine','change',updateSelects);
   bind('#btnMaestroInfo','click',maestroInfo); bind('#btnMaestroStatus','click',maestroStatus);
   bind('#btnOrderOpen','click',()=>maestroOrder('open')); bind('#btnOrderActivate','click',()=>maestroOrder('activate')); bind('#btnOrderClose','click',()=>maestroOrder('close'));
@@ -160,24 +160,71 @@ async function loadClients(){ const q=$('#clientSearch')?.value||''; const reque
 async function loadJobTypes(){ state.jobTypes=await api('job-types'); updateSelects(); }
 async function loadMachines(){ state.machines=await api('machines'); renderTable($('#machinesTable'),[{label:'Nome',key:'name'},{label:'Tipo',key:'kind'},{label:'API',key:'api_version'},{label:'Host',key:'host'},{label:'Porta',key:'port'},{label:'Base path',key:'base_path'},{label:'Online',render:r=>r.kind==='maestro_rest'?(Number(r.online)?'<span class="badge online">Online</span>':'<span class="badge offline">Offline</span>'):'—'},{label:'Ultimo controllo',render:r=>fmtDateTime(r.last_checked_at)}],state.machines,r=>`<button data-edit-machine="${r.id}" class="secondary">Modifica</button>`); all('[data-edit-machine]').forEach(b=>b.addEventListener('click',()=>fillForm($('#machineForm'),state.machines.find(x=>x.id==b.dataset.editMachine)))); updateSelects(); }
 async function loadJobs(){ const q=$('#jobSearch')?.value||'', status=$('#jobStatusFilter')?.value||''; const requests=[api('jobs',{query:{q:q,status:status}})]; if(q.trim()||status)requests.push(api('jobs')); const result=await Promise.all(requests); state.jobs=result[0]; state.jobOptions=result[1]||result[0]; renderJobs(); updateSelects(); }
-function renderJobs(){ renderTable($('#jobsTable'),[{label:'',render:r=>r.source_type==='MAESTRO_REST'?`<input type="checkbox" class="job-check" value="${r.id}" ${state.selectedJobs.has(String(r.id))?'checked':''}>`:''},{label:'Codice',render:r=>`<strong>${esc(r.job_code)}</strong>`},{label:'Titolo',key:'title'},{label:'Cliente',key:'company_name'},{label:'Macchina',key:'machine_name'},{label:'Stato',render:r=>badge(r.status)},{label:'Creata',render:r=>fmtDateTime(r.created_at)}],state.jobs,r=>`<button type="button" data-open-report="${r.id}" class="secondary">Report</button><button data-edit-job="${r.id}" class="secondary">Modifica</button><button data-del-job="${r.id}" class="danger">Elimina</button>`); all('.job-check').forEach(ch=>ch.addEventListener('change',()=>{ch.checked?state.selectedJobs.add(ch.value):state.selectedJobs.delete(ch.value); updateBulkCount();})); all('[data-edit-job]').forEach(b=>b.addEventListener('click',()=>editJob(state.jobs.find(x=>x.id==b.dataset.editJob)))); all('[data-del-job]').forEach(b=>b.addEventListener('click',async()=>{ if(!confirm('Eliminare la commessa?'))return; try{await api('jobs',{method:'DELETE',query:{id:b.dataset.delJob}}); state.selectedJobs.delete(String(b.dataset.delJob)); await loadJobs(); await loadDashboard(); toast('Commessa eliminata');}catch(e){toast(e.message,'error');} })); updateBulkCount(); }
+function renderJobs(){
+  renderTable(
+    $('#jobsTable'),
+    [
+      {label:'',render:r=>r.source_type==='MAESTRO_REST'?`<input type="checkbox" class="job-check" value="${r.id}" ${state.selectedJobs.has(String(r.id))?'checked':''}>`:''},
+      {label:'Codice',render:r=>`<strong>${esc(r.job_code)}</strong>`},
+      {label:'Titolo',key:'title'},
+      {label:'Cliente',key:'company_name'},
+      {label:'Macchina',key:'machine_name'},
+      {label:'Stato',render:r=>badge(r.status)},
+      {label:'Creata',render:r=>fmtDateTime(r.created_at)}
+    ],
+    state.jobs,
+    r=>{
+      const activate=(r.source_type==='MAESTRO_REST'&&r.status==='aperta')
+        ?`<button type="button" data-activate-job="${r.id}">Attiva lavorazione</button>`
+        :'';
+      return `${activate}<button type="button" data-open-report="${r.id}" class="secondary">Report</button><button data-edit-job="${r.id}" class="secondary">Modifica</button><button data-del-job="${r.id}" class="danger">Elimina</button>`;
+    }
+  );
+  all('.job-check').forEach(ch=>ch.addEventListener('change',()=>{ch.checked?state.selectedJobs.add(ch.value):state.selectedJobs.delete(ch.value); updateBulkCount();}));
+  all('[data-activate-job]').forEach(b=>b.addEventListener('click',()=>activateJobFromList(b.dataset.activateJob)));
+  all('[data-edit-job]').forEach(b=>b.addEventListener('click',()=>editJob(state.jobs.find(x=>x.id==b.dataset.editJob))));
+  all('[data-del-job]').forEach(b=>b.addEventListener('click',async()=>{
+    if(!confirm('Eliminare la commessa?'))return;
+    try{
+      await api('jobs',{method:'DELETE',query:{id:b.dataset.delJob}});
+      state.selectedJobs.delete(String(b.dataset.delJob));
+      await loadJobs();
+      await loadDashboard();
+      toast('Commessa eliminata');
+    }catch(e){toast(e.message,'error');}
+  }));
+  updateBulkCount();
+}
 function updateBulkCount(){ $('#bulkCount').textContent=`${state.selectedJobs.size} selezionate`; }
 function updateSelects(){ const jobRows=state.jobOptions.length?state.jobOptions:state.jobs; const types=optionHtml(state.jobTypes,r=>r.name,'Seleziona tipo'); const machines=optionHtml(state.machines.filter(m=>Number(m.active)),r=>r.name,'Nessuna'); const maestro=state.machines.filter(m=>m.kind==='maestro_rest'&&Number(m.active)); const folders=state.machines.filter(m=>m.kind==='folder'&&Number(m.active)); all('select[name="job_type_id"]').forEach(s=>preserveValue(s,types)); all('select[name="machine_id"]').forEach(s=>preserveValue(s,machines)); ['#maestroMachine','#bulkMachine'].forEach(sel=>preserveValue($(sel),optionHtml(maestro,r=>r.name))); preserveValue($('#folderMachine'),optionHtml(folders,r=>r.name)); const maestroMachineId=Number($('#maestroMachine')?.value||0); const maestroJobs=jobRows.filter(r=>r.source_type==='MAESTRO_REST'&&(!Number(r.machine_id)||!maestroMachineId||Number(r.machine_id)===maestroMachineId)); preserveValue($('#maestroJob'),optionHtml(maestroJobs,r=>`${r.job_code} - ${r.company_name}`,'Seleziona commessa')); const folderMachineId=Number($('#folderMachine')?.value||0); const folderJobs=jobRows.filter(r=>r.source_type==='SMB_FOLDER'&&(!Number(r.machine_id)||!folderMachineId||Number(r.machine_id)===folderMachineId)); preserveValue($('#assignJob'),optionHtml(folderJobs,r=>`${r.job_code} - ${r.company_name}`,'Seleziona commessa')); preserveValue($('#folderNewType'),optionHtml(state.jobTypes.filter(t=>t.source_type==='SMB_FOLDER'),r=>r.name,'Seleziona tipo')); updateClientPickers(); }
+async function activateJobFromList(jobId){
+  const job=(state.jobOptions.length?state.jobOptions:state.jobs).find(r=>String(r.id)===String(jobId))||state.jobs.find(r=>String(r.id)===String(jobId));
+  if(!job)return toast('Commessa non trovata','error');
+  if(job.source_type!=='MAESTRO_REST')return toast('Questa commessa non è della bordatrice','error');
+  if(job.status!=='aperta')return toast('La commessa deve essere caricata sulla macchina prima di attivarla','error');
+  const machineId=Number(job.machine_id||0);
+  if(!machineId)return toast('Prima carica la commessa sulla Bordatrice','error');
+  try{
+    const d=await api('maestro/order',{body:{job_id:Number(job.id),machine_id:machineId,action:'activate'}});
+    if(!d.success)return toast('Attivazione non eseguita: '+(d.error||('HTTP '+d.http_code)),'error');
+    await Promise.all([loadJobs(),loadDashboard()]);
+    toast('Lavorazione attivata: '+job.job_code);
+  }catch(e){toast(e.message,'error');}
+}
 async function bulkOrder(action){
   const ids=[...state.selectedJobs].map(Number);
   if(!ids.length)return toast('Seleziona almeno una commessa','error');
   if(!$('#bulkMachine').value)return toast('Seleziona una macchina','error');
-  if(action==='activate'&&ids.length!==1)return toast('Per Attiva seleziona una sola commessa','error');
   if(action==='close'&&!confirm(`Chiudere ${ids.length} commesse sulla macchina?`))return;
   try{
     const d=await api('maestro/orders-bulk',{body:{machine_id:$('#bulkMachine').value,job_ids:ids,action}});
     const ok=d.results.filter(r=>r.success).length;
     const failed=d.results.filter(r=>!r.success);
-    const actionLabel=action==='open'?'Apertura':action==='activate'?'Attivazione':'Chiusura';
+    const actionLabel=action==='open'?'Caricamento':'Chiusura';
     $('#bulkResult').innerHTML=`<strong>${actionLabel}: ${ok} completate</strong>${failed.length?` · <span class="error-text">${failed.length} con errore</span><div class="muted small">${failed.map(r=>esc(r.job_code)+': '+esc(r.error||('HTTP '+r.http_code))).join('<br>')}</div>`:''}`;
     state.selectedJobs.clear();
     await Promise.all([loadJobs(),loadDashboard()]);
-    toast(failed.length?`${actionLabel} completata con errori: ${ok}/${d.results.length}`:`${actionLabel} completata`,failed.length?'error':'ok');
+    toast(failed.length?`${actionLabel} completato con errori: ${ok}/${d.results.length}`:`${actionLabel} completato`,failed.length?'error':'ok');
   }catch(e){toast(e.message,'error');}
 }
 
@@ -376,5 +423,5 @@ async function uploadCompanyLogo(e){
   }catch(err){toast(err.message,'error');}
 }
 
-console.info('Gestionale UI build 20260929-1305');
+console.info('Gestionale UI build 20260929-1315');
 window.addEventListener('DOMContentLoaded',()=>bootstrap().catch(err=>{ console.error('Bootstrap UI fallito:',err); toast(err?.message||'Errore inizializzazione','error'); }));
